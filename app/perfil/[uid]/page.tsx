@@ -1,15 +1,23 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
-import Perfil from "../../components/Perfil"; // ajuste o caminho
+import React, { useEffect, useState } from "react";
+import Perfil from "../../components/Perfil";
 
 interface PerfilPageProps {
-  params: { uid: string };
+  params: Promise<{ uid: string }>;
 }
 
 const PerfilPage: React.FC<PerfilPageProps> = ({ params }) => {
-  return <Perfil userId={params.uid} />;
+  const [uid, setUid] = useState<string | null>(null);
+
+  useEffect(() => {
+    // “Desembrulha” a promise
+    params.then(p => setUid(p.uid));
+  }, [params]);
+
+  if (!uid) return <div>Carregando...</div>;
+
+  return <Perfil userId={uid} />;
 };
 
 export default PerfilPage;
-
