@@ -47,27 +47,6 @@ interface PerfilProps {
   userId?: string;
 }
 
-interface Organization {
-  id: string;
-  name: string;
-  tag: string;
-  slug: string;
-  ownerId: string;
-  hasPendingRequest?: boolean;
-  createdAt: any;
-  updatedAt: any;
-  logoURL?: string;
-  region: string;
-  game: string; // ou GameType se tiver enum
-  visibility: string; // ou OrganizationVisibility se tiver enum
-  memberCount: number;
-  description?: string;
-  maxMembers: number;
-  settings: {
-    allowPublicJoin: boolean;
-    requireApproval: boolean;
-  };
-}
 
 const navigation = [
   { label: "Retornar", icon: <HiArrowLeft className="w-5 h-5" /> },
