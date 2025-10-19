@@ -629,14 +629,9 @@ const FeedWithChat: React.FC<FeedProps> = ({
                     <div className="flex flex-col">
                       <span className="font-medium flex items-center gap-1">
                         {p.authorTag && (
-                          <Chip
-                            color="primary"
-                            radius="sm"
-                            size="sm"
-                            variant="flat"
-                          >
-                            {p.authorTag}
-                          </Chip>
+<span className="text-[14px] mr-0 ml-0 text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)] animate-pulse">
+  {p.authorTag}
+</span>
                         )}
                         {p.authorName}
                       </span>
@@ -817,14 +812,9 @@ const FeedWithChat: React.FC<FeedProps> = ({
                                 <div className="flex flex-col">
                                   <span className="text-[13px] text-gray-200 -mt-0">
                                     {c.authorTag && c.authorTag.trim() !== "" && (
-                                      <Chip
-                                        color="primary"
-                                        radius="sm"
-                                        size="sm"
-                                        variant="flat"
-                                      >
-                                        {c.authorTag}
-                                      </Chip>
+<span className="text-[14px] mr-2 ml-0 text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)] animate-pulse">
+   {c.authorTag}
+</span>
                                     )}
                                     {c.authorName}
                                     <span className="text-[8px] text-gray-500 italic ml-1">
