@@ -336,7 +336,7 @@ const Perfil: React.FC<PerfilProps> = ({ userId }) => {
 
       {/* Perfil */}
       <div style={{ maxWidth: 800, margin: "0 auto", padding: 0 }}>
-        <Card className="space-y-6">
+        <Card className="space-y-6 mr-5 ml-5">
           <CardHeader className="flex flex-col items-center gap-3">
             <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-white/30 bg-gray-700">
               <img src={profileUser.photoURL || "/default-avatar.png"} alt="Avatar" className="h-full w-full object-cover" />

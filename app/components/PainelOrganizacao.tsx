@@ -148,7 +148,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
               Criar Organização
             </Button>
             <Button
-              startContent={<HiOutlineUsers className="w-4 h-4 mr-5 ml-5" />}
+              startContent={<HiOutlineUsers className="w-4 h-4" />}
               variant="bordered"
               onClick={() => {
                 const event = new CustomEvent("changeTab", {
