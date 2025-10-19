@@ -787,20 +787,33 @@ const FeedWithChat: React.FC<FeedProps> = ({
                               className="flex flex-col  pb-2 last:border-none"
                             >
                               <div className="flex items-center gap-2">
-                                <Avatar
-                                  size="sm"
-                                  src={c.authorAvatar || "/default-avatar.png"}
-                                />
+            {c.authorId !== user.uid ? (
+    <Tooltip content="Visitar perfil" placement="top">
+      <Avatar
+        size="sm"
+        src={c.authorAvatar || "/default-avatar.png"}
+        className="cursor-pointer"
+        onClick={() => router.push(`/perfil/${c.authorId}`)}
+      />
+    </Tooltip>
+  ) : (
+    <Avatar
+      size="sm"
+      src={c.authorAvatar || "/default-avatar.png"}
+    />
+  )}
                                 <div className="flex flex-col">
                                   <span className="text-[13px] text-gray-200 -mt-0">
-                                    <Chip
-                                      color="primary"
-                                      radius="sm"
-                                      size="sm"
-                                      variant="flat"
-                                    >
-                                      {c.authorTag}
-                                    </Chip>{" "}
+                                    {c.authorTag && c.authorTag.trim() !== "" && (
+                                      <Chip
+                                        color="primary"
+                                        radius="sm"
+                                        size="sm"
+                                        variant="flat"
+                                      >
+                                        {c.authorTag}
+                                      </Chip>
+                                    )}
                                     {c.authorName}
                                     <span className="text-[8px] text-gray-500 italic ml-1">
                                       {c.createdAt?.toDate
@@ -922,34 +935,32 @@ const FeedWithChat: React.FC<FeedProps> = ({
             {likesUsers.length === 0 ? (
               <p>Sem reacao ainda.</p>
             ) : (
-              <Listbox
-                aria-label="Lista de usuários que curtiram"
-                classNames={{
-                  base: "w-full max-w-[280px]",
-                  list: "max-h-[300px] overflow-y-auto",
-                }}
-              >
-                {likesUsers.map((u) => (
-                  <ListboxItem key={u.uid} textValue={u.name}>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium flex items-center gap-1">
-                        {u.organizationTag && (
-                          <Chip
-                            color="primary"
-                            radius="sm"
-                            size="sm"
-                            variant="flat"
-                          >
-                            {u.organizationTag}
-                          </Chip>
-                        )}
-                        {u.name}
-                        <span className="ml-2 text-lg">{u.reactionEmoji}</span>
-                      </span>
-                    </div>
-                  </ListboxItem>
-                ))}
-              </Listbox>
+             <Listbox
+  aria-label="Lista de usuários que curtiram"
+  classNames={{
+    base: "w-full max-w-[280px] -mt-3",
+    list: "max-h-[300px] overflow-y-auto",
+  }}
+>
+  {likesUsers.map((u) => (
+    <ListboxItem key={u.uid} textValue={u.name}>
+      <Tooltip content="Visitar perfil" placement="top">
+        <div
+          className="flex items-center gap-2 cursor-pointer hover:bg-gray-700/20 rounded-md p-1 transition-colors"
+          onClick={() => router.push(`/perfil/${u.uid}`)}
+        >
+         <Avatar
+            alt={u.name}
+            className="h-8 w-8 rounded-full"
+            src={u.avatar || "/default-avatar.png"}
+          />
+          <span className="font-medium">{u.name}</span>
+          <span className="ml-2 text-lg">{u.reactionEmoji}</span>
+        </div>
+      </Tooltip>
+    </ListboxItem>
+  ))}
+</Listbox>
             )}
           </ModalBody>
           <ModalFooter>
