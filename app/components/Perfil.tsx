@@ -13,7 +13,7 @@ import {
   signOut,
   updateProfile,
 } from "firebase/auth";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, updateDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import {
   HiOutlineCalendar,
@@ -32,6 +32,7 @@ import { useRouter } from "next/navigation";
 import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from "@heroui/modal";
 import { Code } from "@heroui/code";
 import { BreadcrumbItem, Breadcrumbs } from "@heroui/breadcrumbs";
+import { Organization } from "../types"; // ajuste o caminho conforme seu projeto
 
 interface PerfilUser {
   uid: string;
@@ -44,6 +45,28 @@ interface PerfilUser {
 
 interface PerfilProps {
   userId?: string;
+}
+
+interface Organization {
+  id: string;
+  name: string;
+  tag: string;
+  slug: string;
+  ownerId: string;
+  hasPendingRequest?: boolean;
+  createdAt: any;
+  updatedAt: any;
+  logoURL?: string;
+  region: string;
+  game: string; // ou GameType se tiver enum
+  visibility: string; // ou OrganizationVisibility se tiver enum
+  memberCount: number;
+  description?: string;
+  maxMembers: number;
+  settings: {
+    allowPublicJoin: boolean;
+    requireApproval: boolean;
+  };
 }
 
 const navigation = [
@@ -64,6 +87,48 @@ const Perfil: React.FC<PerfilProps> = ({ userId }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const handleLogout = async () => await signOut(auth);
   const isOwnProfile = !userId || userId === auth.currentUser?.uid;
+const [organization, setOrganization] = useState<Organization | null>(null);
+
+useEffect(() => {
+  const fetchOrganization = async () => {
+    if (!profileUser?.organizationTag) return;
+
+    try {
+      const orgQuery = await getDocs(collection(db, "organizations"));
+      let foundOrg: Organization | null = null;
+
+      orgQuery.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.tag === profileUser.organizationTag) {
+          foundOrg = {
+            id: docSnap.id,
+            name: data.name,
+            tag: data.tag,
+            slug: data.slug,
+            ownerId: data.ownerId,
+            hasPendingRequest: data.hasPendingRequest,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+            logoURL: data.logoURL,
+            region: data.region,
+            game: data.game,
+            visibility: data.visibility,
+            memberCount: data.memberCount,
+            description: data.description,
+            maxMembers: data.maxMembers,
+            settings: data.settings,
+          };
+        }
+      });
+
+      setOrganization(foundOrg);
+    } catch (err) {
+      console.error("Erro ao buscar organização:", err);
+    }
+  };
+
+  fetchOrganization();
+}, [profileUser?.organizationTag]);
 
   // --- Carrega usuário logado ---
   useEffect(() => {
@@ -338,18 +403,46 @@ const Perfil: React.FC<PerfilProps> = ({ userId }) => {
       <div style={{ maxWidth: 800, margin: "0 auto", padding: 0 }}>
         <Card className="space-y-6 mr-5 ml-5">
           <CardHeader className="flex flex-col items-center gap-3">
-            <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-white/30 bg-gray-700">
-              <img src={profileUser.photoURL || "/default-avatar.png"} alt="Avatar" className="h-full w-full object-cover" />
-            </div>
+<div className="flex items-center gap-2" >
+
+  <img
+    src={profileUser.photoURL || "/default-avatar.png"}
+    alt="Avatar"
+    className="h-20 w-20 rounded-full object-cover border-2 border-white/30 bg-gray-700  z-10"
+  />
+  {organization?.logoURL && (
+    <img
+      src={organization.logoURL}
+      alt={organization.name}
+      className="-ml-10 h-20 w-20 rounded-full object-cover border-2 border-white/30 bg-gray-700  z-0"
+    />
+  )}
+
+  
+</div>
 
             {isOwnProfile ? (
               editMode ? (
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome" />
               ) : (
+                <>
+                
                 <h2 className="text-3xl font-bold">{profileUser.displayName}</h2>
+                  {organization?.name && (
+    <h3 className="text-lg font-bold text-gray-500 -mt-2" >{organization.name}</h3>
+      )}
+
+</>
+                
               )
             ) : (
-              <h2 className="text-3xl font-bold">{profileUser.displayName}</h2>
+              <>
+                <h2 className="text-3xl font-bold">{profileUser.displayName}</h2>
+                              {organization?.name && (
+    <h3 className="text-lg font-bold text-gray-500 -mt-2">{organization.name}</h3>
+      )}
+              </>
+            
             )}
           </CardHeader>
 
@@ -366,6 +459,8 @@ const Perfil: React.FC<PerfilProps> = ({ userId }) => {
                 Criado em: {profileUser.createdAt ? profileUser.createdAt.toLocaleDateString() : "—"}
               </span>
             </div>
+
+
           </CardBody>
 
           {isOwnProfile && (
