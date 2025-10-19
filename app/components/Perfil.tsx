@@ -24,6 +24,7 @@ import {
   HiOutlineLogout,
   HiArrowLeft,
   HiOutlineNewspaper,
+  HiOutlineEye,
 } from "react-icons/hi";
 import { Navbar, NavbarContent, NavbarItem } from "@heroui/navbar";
 import { Tooltip } from "@heroui/tooltip";
@@ -32,7 +33,7 @@ import { useRouter } from "next/navigation";
 import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from "@heroui/modal";
 import { Code } from "@heroui/code";
 import { BreadcrumbItem, Breadcrumbs } from "@heroui/breadcrumbs";
-import { Organization } from "../types"; // ajuste o caminho conforme seu projeto
+import { Organization, Membership} from "../types"; // ajuste o caminho conforme seu projeto
 
 interface PerfilUser {
   uid: string;
@@ -40,6 +41,7 @@ interface PerfilUser {
   email?: string;
   photoURL?: string;
   organizationTag?: string;
+  organizationRole?: string;
   createdAt?: Date;
 }
 
@@ -60,6 +62,7 @@ const Perfil: React.FC<PerfilProps> = ({ userId }) => {
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState("");
   const [organizationTag, setOrganizationTag] = useState("");
+  const [organizationRole, setOrganizationRole] = useState("");
   const [showNameModal, setShowNameModal] = useState(false);
   const [newName, setNewName] = useState("");
   const router = useRouter();
@@ -67,6 +70,15 @@ const Perfil: React.FC<PerfilProps> = ({ userId }) => {
   const handleLogout = async () => await signOut(auth);
   const isOwnProfile = !userId || userId === auth.currentUser?.uid;
 const [organization, setOrganization] = useState<Organization | null>(null);
+// --- Modal de membros ---
+const [modalOpen, setModalOpen] = useState(false);
+const [modalMembers, setModalMembers] = useState<Membership[]>([]);
+const [modalMembersWithUserData, setModalMembersWithUserData] = useState<
+  (Membership & { displayName?: string; photoURL?: string })[]
+>([]);
+const [modalOrgName, setModalOrgName] = useState("");
+const [modalMemberFilter, setModalMemberFilter] = useState("");
+
 
 useEffect(() => {
   const fetchOrganization = async () => {
@@ -122,6 +134,7 @@ useEffect(() => {
           displayName: data.displayName || currentUser.displayName || "Usuário",
           email: data.email || currentUser.email || "",
           photoURL: data.photoURL || currentUser.photoURL || "",
+          organizationRole: data.organizationRole || "",
           organizationTag: data.organizationTag || "",
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
         });
@@ -145,6 +158,7 @@ useEffect(() => {
         const perfil: PerfilUser = {
           uid: uidToFetch,
           displayName: data.displayName || "",
+          organizationRole: data.organizationRole || "",
           email: data.email || "",
           photoURL: data.photoURL || "",
           organizationTag: data.organizationTag || "",
@@ -153,6 +167,7 @@ useEffect(() => {
 
         setProfileUser(perfil);
         setName(perfil.displayName);
+    
         setAvatar(perfil.photoURL || "");
         setOrganizationTag(perfil.organizationTag || "");
       } catch (err) {
@@ -219,6 +234,80 @@ useEffect(() => {
       addToast({ title: "Erro", description: "Erro ao enviar imagem.", color: "danger" });
     }
   };
+
+
+  const openMembersModal = async (orgId: string, orgName: string) => {
+      try {
+        const membersSnap = await getDocs(
+          collection(db, `organizations/${orgId}/memberships`),
+        );
+        const membersData: Membership[] = membersSnap.docs.map(
+          (doc) => doc.data() as Membership,
+        );
+  
+        // Buscar dados dos usuários para cada membro
+        const membersWithUserData = await Promise.all(
+          membersData.map(async (member) => {
+            try {
+              // Primeiro tenta buscar no documento do membership
+              if (member.displayName && member.photoURL) {
+                return {
+                  ...member,
+                  displayName: member.displayName,
+                  photoURL: member.photoURL,
+                };
+              }
+  
+              const userDoc = await getDoc(doc(db, "Users", member.userId));
+  
+              if (userDoc.exists()) {
+                const userData = userDoc.data();
+  
+                return {
+                  ...member,
+                  displayName:
+                    userData.displayName || userData.email || "Usuário",
+                  photoURL: userData.photoURL || "",
+                };
+              }
+  
+              // Fallback se não encontrar o usuário
+              return {
+                ...member,
+                displayName: member.userId,
+                photoURL: "",
+              };
+            } catch (error) {
+              console.error(
+                `Erro ao buscar dados do usuário ${member.userId}:`,
+                error,
+              );
+  
+              return {
+                ...member,
+                displayName: member.userId,
+                photoURL: "",
+              };
+            }
+          }),
+        );
+  
+        setModalMembers(membersData);
+        setModalMembersWithUserData(membersWithUserData);
+        setModalOrgName(orgName);
+        setModalMemberFilter("");
+        setModalOpen(true);
+      } catch (error) {
+        console.error("Erro ao buscar membros da organização:", error);
+        addToast({
+          title: "Erro",
+          description: "Não foi possível carregar membros",
+          color: "danger",
+        });
+      }
+    };
+  
+
 
   if (loading) return <p className="text-center mt-10">Carregando perfil...</p>;
   if (!profileUser) return <p className="text-center mt-10 text-red-500">Usuário não encontrado.</p>;
@@ -381,49 +470,146 @@ useEffect(() => {
       {/* Perfil */}
       <div style={{ maxWidth: 800, margin: "0 auto", padding: 0 }}>
         <Card className="space-y-6 mr-5 ml-5">
-          <CardHeader className="flex flex-col items-center gap-3">
-<div className="flex items-center gap-2" >
-
-  <img
-    src={profileUser.photoURL || "/default-avatar.png"}
-    alt="Avatar"
-    className="h-20 w-20 rounded-full object-cover border-2 border-white/30 bg-gray-700  z-10"
-  />
-  {organization?.logoURL && (
+<CardHeader className="flex flex-col items-center gap-3">
+  {/* Avatares */}
+  <div className="flex items-center gap-2">
     <img
-      src={organization.logoURL}
-      alt={organization.name}
-      className="-ml-10 h-20 w-20 rounded-full object-cover border-2 border-white/30 bg-gray-700  z-0"
+      src={profileUser.photoURL || "/default-avatar.png"}
+      alt="Avatar"
+      className="h-20 w-20 rounded-full object-cover border-2 border-white/30 bg-gray-700 z-10"
     />
-  )}
+    {organization?.logoURL && (
+      <img
+        src={organization.logoURL}
+        alt={organization.name}
+        className="-ml-10 h-20 w-20 rounded-full object-cover border-2 border-white/30 bg-gray-700 z-0"
+      />
+    )}
+  </div>
 
-  
-</div>
+  {/* Nome, organização e cargo */}
+  {isOwnProfile ? (
+    editMode ? (
+      <Input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Nome"
+      />
+    ) : (
+      <>
+        <h2 className="text-3xl font-bold">{profileUser.displayName}</h2>
 
-            {isOwnProfile ? (
-              editMode ? (
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome" />
-              ) : (
-                <>
-                
-                <h2 className="text-3xl font-bold">{profileUser.displayName}</h2>
-                  {organization?.name && (
-    <h3 className="text-lg font-bold text-gray-500 -mt-2" >{organization.name}</h3>
-      )}
+        {organization ? (
+          <div className="flex flex-col items-center w-full -mt-2">
+            {/* Nome da organização + botão colado */}
+            <div className="flex items-center gap-1">
+              <h3 className="text-lg font-bold text-gray-500">
+                {organization.name}
+              </h3>
+              <Button
+                color="secondary"
+                size="sm"
+                variant="flat"
+                className="ml-1"
+                onClick={() =>
+                  openMembersModal(organization.id, organization.name)
+                }
+              >
+               <HiOutlineEye className="h-4 w-4" />
+              </Button>
+            </div>
 
-</>
-                
-              )
-            ) : (
-              <>
-                <h2 className="text-3xl font-bold">{profileUser.displayName}</h2>
-                              {organization?.name && (
-    <h3 className="text-lg font-bold text-gray-500 -mt-2">{organization.name}</h3>
-      )}
-              </>
-            
+            {/* Chip do cargo */}
+            {profileUser.organizationRole && (
+              <Chip
+                color={
+                  profileUser.organizationRole === "owner"
+                    ? "warning"
+                    : profileUser.organizationRole === "manager"
+                    ? "secondary"
+                    : profileUser.organizationRole === "pro"
+                    ? "primary"
+                    : "default"
+                }
+                size="sm"
+                variant="flat"
+                className="mt-1"
+              >
+                {profileUser.organizationRole === "owner"
+                  ? "👑 Dono"
+                  : profileUser.organizationRole === "manager"
+                  ? "⚡ Manager"
+                  : profileUser.organizationRole === "pro"
+                  ? "🌟 Pro Player"
+                  : "🎮 Ranked"}
+              </Chip>
             )}
-          </CardHeader>
+          </div>
+        ) : (
+          <p className="text-center text-gray-400 text-sm">
+            Este usuário não pertence a nenhuma organização.
+          </p>
+        )}
+      </>
+    )
+  ) : (
+    <>
+      <h2 className="text-3xl font-bold">{profileUser.displayName}</h2>
+
+      {organization ? (
+        <div className="flex flex-col items-center w-full -mt-2">
+          {/* Nome da organização + botão colado */}
+          <div className="flex items-center gap-1">
+            <h3 className="text-lg font-bold text-gray-500">
+              {organization.name}
+            </h3>
+            <Button
+              color="secondary"
+              size="sm"
+              variant="flat"
+              className="ml-1"
+              onClick={() =>
+                openMembersModal(organization.id, organization.name)
+              }
+            >
+              <HiOutlineEye className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Chip do cargo */}
+          {profileUser.organizationRole && (
+            <Chip
+              color={
+                profileUser.organizationRole === "owner"
+                  ? "warning"
+                  : profileUser.organizationRole === "manager"
+                  ? "secondary"
+                  : profileUser.organizationRole === "pro"
+                  ? "primary"
+                  : "default"
+              }
+              size="sm"
+              variant="flat"
+              className="mt-1"
+            >
+              {profileUser.organizationRole === "owner"
+                ? "👑 Dono"
+                : profileUser.organizationRole === "manager"
+                ? "⚡ Manager"
+                : profileUser.organizationRole === "pro"
+                ? "🌟 Pro Player"
+                : "🎮 Ranked"}
+            </Chip>
+          )}
+        </div>
+      ) : (
+        <p className="text-center text-gray-400 text-sm">
+          Este usuário não pertence a nenhuma organização.
+        </p>
+      )}
+    </>
+  )}
+</CardHeader>
 
           <Divider />
 
@@ -459,6 +645,67 @@ useEffect(() => {
           )}
         </Card>
       </div>
+
+      {/* Modal de membros da organização */}
+<Modal isOpen={modalOpen} onOpenChange={setModalOpen} size="lg">
+  <ModalContent>
+    <ModalHeader>
+      Membros de {modalOrgName}
+    </ModalHeader>
+    <ModalBody>
+      <Input
+        type="text"
+        placeholder="Filtrar membros..."
+        value={modalMemberFilter}
+        onChange={(e) => setModalMemberFilter(e.target.value)}
+        className="mb-3"
+      />
+
+      <div className="max-h-[400px] overflow-y-auto space-y-3">
+        {modalMembersWithUserData
+          .filter((m) =>
+            m.displayName
+              ?.toLowerCase()
+              .includes(modalMemberFilter.toLowerCase()),
+          )
+          .map((m) => (
+            <div
+              key={m.userId}
+              className="flex items-center justify-between bg-gray-800/40 rounded-xl p-2"
+            >
+              <div className="flex items-center gap-3">
+                <Avatar
+                  src={m.photoURL || "/default-avatar.png"}
+                  size="sm"
+                  radius="lg"
+                />
+                <div>
+                  <p className="font-semibold">{m.displayName}</p>
+                  <p className="text-xs text-gray-400">
+                    {m.role === "owner"
+                      ? "👑 Dono"
+                      : m.role === "manager"
+                      ? "⚡ Gerente"
+                      : m.role === "pro"
+                      ? "🌟 Pro Player"
+                      : "🎮 Membro"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        {modalMembersWithUserData.length === 0 && (
+          <p className="text-center text-gray-500">Nenhum membro encontrado.</p>
+        )}
+      </div>
+    </ModalBody>
+    <ModalFooter>
+      <Button color="danger" variant="flat" onPress={() => setModalOpen(false)}>
+        Fechar
+      </Button>
+    </ModalFooter>
+  </ModalContent>
+</Modal>
     </div>
   );
 };
