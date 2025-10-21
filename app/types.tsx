@@ -64,6 +64,10 @@ export interface ChatMessage {
   senderAvatar?: string;
   text: string;
   createdAt: any; // serverTimestamp
+  audioUrl?: string; // URL do áudio 
+  audioData?: string; // Data string do áudio (base64)
+  audioDuration?: number; // duração em segundos
+  messageType?: 'text' | 'audio'; // tipo da mensagem
 }
 
 // ===== SISTEMA DE CARGOS E ORGANIZAÇÕES =====
@@ -131,6 +135,8 @@ export type EventType = "scrim" | "tournament";
 
 export type EventStatus = "draft" | "open" | "closed" | "finished";
 
+export type EventVisibility = "public" | "private";
+
 export type GameMode = "BR" | "MP";
 
 export type RegistrationState =
@@ -153,6 +159,7 @@ export interface Event {
   checkinWindow?: number; // minutos antes do início
   rulesURL?: string;
   status: EventStatus;
+  visibility: EventVisibility; // público ou privado
   createdBy: string; // userId do manager/moderator/owner
   createdAt: any; // Timestamp
   maxTeams?: number;

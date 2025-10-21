@@ -9,10 +9,8 @@ const firebaseConfig = {
   projectId: "codmsocial-f8015",
   storageBucket: "codmsocial-f8015.firebasestorage.app",
   messagingSenderId: "391686792657",
-  appId: "1:391686792657:web:a5809f64ef1c9a61ecacf0",
+  appId: "1:391686792657:web:a5809f64ef1c9a61ecacf0"
 };
-
-
 
 const app = initializeApp(firebaseConfig);
 

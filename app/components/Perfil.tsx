@@ -25,6 +25,7 @@ import {
   HiArrowLeft,
   HiOutlineNewspaper,
   HiOutlineEye,
+  HiOutlineShare,
 } from "react-icons/hi";
 import { Navbar, NavbarContent, NavbarItem } from "@heroui/navbar";
 import { Tooltip } from "@heroui/tooltip";
@@ -308,6 +309,26 @@ useEffect(() => {
     };
   
 
+     const handleShareProfile = async () => {
+        try {
+          const profileUrl = `${window.location.origin}/perfil/${userId}`;
+          await navigator.clipboard.writeText(profileUrl);
+          
+          addToast({
+            title: "Link copiado!",
+            description: "O link do perfil foi copiado para a área de transferência.",
+            color: "success",
+          });
+        } catch (error) {
+          console.error("Erro ao copiar link:", error);
+          addToast({
+            title: "Erro",
+            description: "Não foi possível copiar o link do perfil.",
+            color: "danger",
+          });
+        }
+      };
+      
 
   if (loading) return <p className="text-center mt-10">Carregando perfil...</p>;
   if (!profileUser) return <p className="text-center mt-10 text-red-500">Usuário não encontrado.</p>;
@@ -625,6 +646,20 @@ useEffect(() => {
               </span>
             </div>
 
+    <div className="flex justify-center pt-4">
+              <Button
+                variant="bordered"
+                startContent={<HiOutlineShare className="w-4 h-4" />}
+                onPress={handleShareProfile}
+                style={{ 
+                  borderColor: "#441729", 
+                  color: "#f1f5f9" 
+                }}
+                className="hover:bg-[#441729] hover:text-white transition-colors"
+              >
+                Compartilhar Perfil
+              </Button>
+            </div>
 
           </CardBody>
 

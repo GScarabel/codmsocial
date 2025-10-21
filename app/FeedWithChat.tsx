@@ -552,18 +552,18 @@ const FeedWithChat: React.FC<FeedProps> = ({
                           <span>Conversar</span>
                         </div>
                       </DropdownItem>
-{u.uid !== user.uid ? (
-  <DropdownItem
-    key={`${u.uid}-profile`}
-    className="flex items-center px-3 py-2"
-    onClick={() => router.push(`/perfil/${u.uid}`)}
-  >
-    <div className="flex items-center gap-2">
-      <HiOutlineUser className="w-4 h-4" />
-      <span>Visitar Perfil</span>
-    </div>
-  </DropdownItem>
-) : null}
+                      {u.uid !== user.uid ? (
+                        <DropdownItem
+                          key={`${u.uid}-profile`}
+                          className="flex items-center px-3 py-2"
+                          onClick={() => router.push(`/perfil/${u.uid}`)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <HiOutlineUser className="w-4 h-4" />
+                            <span>Visitar Perfil</span>
+                          </div>
+                        </DropdownItem>
+                      ) : null}
                     </DropdownMenu>
                   </Dropdown>
                 ),

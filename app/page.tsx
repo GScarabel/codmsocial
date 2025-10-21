@@ -60,6 +60,7 @@ import {
 } from "react-icons/hi";
 import { Breadcrumbs, BreadcrumbItem } from "@heroui/breadcrumbs";
 import { HiOutlineBuildingStorefront, HiOutlineTrophy } from "react-icons/hi2";
+import { HiOutlineCalendar } from "react-icons/hi";
 
 import { db, auth, provider } from "./firebase";
 import CriarOrganizacao from "./CriarOrganizacao";
@@ -74,6 +75,7 @@ import { useRoleManagement } from "./hooks/useRoleManagement";
 import MinhasOrganizacoes from "./components/MinhasOrganizacoes";
 import ExplorarOrganizacoes from "./components/ExplorarOrganizacoes";
 import PainelOrganizacao from "./components/PainelOrganizacao";
+import XTreinosPublicos from "./components/XTreinosPublicos";
 import { Post, ChatOverview, ChatMessage } from "./types";
 import Login from "./Login";
 import Chat from "./Chat";
@@ -81,10 +83,15 @@ import FeedWithChat from "./FeedWithChat";
 import MercadoOrganizacao from "./components/MercadoOrganizacao";
 import RankingSystem from "./components/RankingSystem";
 import Perfil from "./components/Perfil"; // importa o componente
+import SplashScreen from "./components/SplashScreen";
 
 const navigation = [
   { label: "Feed", icon: <HiOutlineNewspaper className="w-5 h-5" /> },
   { label: "Conversas", icon: <HiOutlineInbox className="w-5 h-5" /> },
+  {
+    label: "Treinos/Campeonatos",
+    icon: <HiOutlineCalendar className="w-5 h-5" />,
+  },
   {
     label: "Ranking",
     icon: <HiOutlineTrophy className="w-5 h-5" />,
@@ -110,9 +117,11 @@ const navigation = [
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
     | "Feed"
     | "Conversas"
+    | "Treinos/Campeonatos"
     | "Ranking"
     | "Minhas Organizações"
     | "Explorar Organizações"
@@ -232,6 +241,8 @@ export default function Home() {
           setProfilePhoto(u.photoURL || "");
         }
       }
+      // Definir loading como false após verificar o estado de autenticação
+      setIsAuthLoading(false);
     });
 
     return () => unsub();
@@ -544,8 +555,7 @@ export default function Home() {
         const msgs = snap.docs.map((d) => {
           const data = d.data() as ChatMessage;
 
-          console.log("Mensagem:", data);
-
+          //console.log("Mensagem:", data);
           return { ...data, id: d.id }; // Adicionar ID do documento
         });
 
@@ -797,6 +807,11 @@ export default function Home() {
     }
   };
 
+  // Mostrar splash screen enquanto verifica autenticação
+  if (isAuthLoading) {
+    return <SplashScreen />;
+  }
+
   if (!user) return <Login handleGoogleLogin={handleGoogleLogin} />;
 
   // Filtrar navegação baseado no status do usuário
@@ -829,6 +844,7 @@ export default function Home() {
                         n.label as
                           | "Feed"
                           | "Conversas"
+                          | "Treinos/Campeonatos"
                           | "Ranking"
                           | "Minhas Organizações"
                           | "Explorar Organizações"
@@ -877,6 +893,7 @@ export default function Home() {
                         n.label as
                           | "Feed"
                           | "Conversas"
+                          | "Treinos/Campeonatos"
                           | "Ranking"
                           | "Minhas Organizações"
                           | "Explorar Organizações"
@@ -912,8 +929,8 @@ export default function Home() {
           </div>
         </NavbarContent>
 
-        {/* Navbar direita */}
-        <NavbarContent justify="end">
+
+         <NavbarContent justify="end">
           <Button color="danger" onPress={handleLogout}>
             <HiOutlineLogout className="w-5 h-5" />
           </Button>
@@ -1168,8 +1185,12 @@ export default function Home() {
             }
             userId={user?.uid || ""}
             onChatTextChange={handleChatTextChange}
+            userName={user?.displayName || ""}
+            userAvatar={user?.photoURL || ""}
           />
         )}
+
+        {activeTab === "Treinos/Campeonatos" && <XTreinosPublicos />}
 
         {activeTab === "Ranking" && <RankingSystem user={user} />}
 
