@@ -36,19 +36,13 @@ export default defineConfig([globalIgnores([
     "**/coverage",
     "**/.next",
     "**/build",
-    "!**/.commitlintrc.cjs",
-    "!**/.lintstagedrc.cjs",
-    "!**/jest.config.js",
-    "!**/plopfile.js",
-    "!**/react-shim.js",
-    "!**/tsup.config.ts",
 ]), {
     extends: fixupConfigRules(compat.extends(
         "plugin:react/recommended",
         "plugin:prettier/recommended",
         "plugin:react-hooks/recommended",
         "plugin:jsx-a11y/recommended",
-        "plugin:@next/next/recommended",
+        "plugin:@next/next/recommended"
     )),
 
     plugins: {
@@ -86,22 +80,25 @@ export default defineConfig([globalIgnores([
     files: ["**/*.ts", "**/*.tsx"],
 
     rules: {
+        // WARNINGS, não travam o build
         "no-console": "warn",
         "react/prop-types": "warn",
-        "react/jsx-uses-react": "warn",
-        "react/react-in-jsx-scope": "warn",
+        "react/jsx-uses-react": "off",
+        "react/react-in-jsx-scope": "off", // Next 13+ já importa React automaticamente
         "react-hooks/exhaustive-deps": "warn",
         "jsx-a11y/click-events-have-key-events": "warn",
         "jsx-a11y/interactive-supports-focus": "warn",
         "prettier/prettier": "warn",
         "no-unused-vars": "warn",
         "unused-imports/no-unused-vars": "warn",
-        "unused-imports/no-unused-imports": "warn",
+        "unused-imports/no-unused-imports": "error",
 
         "@typescript-eslint/no-unused-vars": ["warn", {
+            vars: "all",
+            varsIgnorePattern: "^_",
             args: "after-used",
-            ignoreRestSiblings: false,
-            argsIgnorePattern: "^_.*?$",
+            argsIgnorePattern: "^_",
+            ignoreRestSiblings: true,
         }],
 
         "import/order": ["warn", {
@@ -115,18 +112,15 @@ export default defineConfig([globalIgnores([
                 "sibling",
                 "index",
             ],
-
             pathGroups: [{
                 pattern: "~/**",
                 group: "external",
                 position: "after",
             }],
-
             "newlines-between": "always",
         }],
 
         "react/self-closing-comp": "warn",
-
         "react/jsx-sort-props": ["warn", {
             callbacksLast: true,
             shorthandFirst: true,

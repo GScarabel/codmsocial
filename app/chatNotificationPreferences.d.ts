@@ -5,11 +5,11 @@ type WritableStorage = Pick<Storage, "setItem"> | null | undefined;
 
 export declare function readConversationNotificationPreference(
   conversationId: string | null | undefined,
-  storage?: ReadableStorage
+  storage?: ReadableStorage,
 ): boolean;
 
 export declare function writeConversationNotificationPreference(
   conversationId: string | null | undefined,
   enabled: boolean,
-  storage?: WritableStorage
+  storage?: WritableStorage,
 ): void;

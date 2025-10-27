@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { getDatabase, ref, onValue, onDisconnect, serverTimestamp, set, update } from "firebase/database";
+import {
+  getDatabase,
+  ref,
+  onValue,
+  onDisconnect,
+  serverTimestamp,
+  set,
+  update,
+} from "firebase/database";
+
 import { auth } from "../firebase";
 
 export type PresenceState = "online" | "away" | "offline";
@@ -61,14 +70,20 @@ export function usePresence() {
       // "Away" quando aba perde foco
       const onBlur = async () => {
         try {
-          await update(myStatusRef, { state: "away", last_active: serverTimestamp() });
+          await update(myStatusRef, {
+            state: "away",
+            last_active: serverTimestamp(),
+          });
         } catch (error) {
           console.error("Erro ao marcar como away:", error);
         }
       };
       const onFocus = async () => {
         try {
-          await update(myStatusRef, { state: "online", last_active: serverTimestamp() });
+          await update(myStatusRef, {
+            state: "online",
+            last_active: serverTimestamp(),
+          });
         } catch (error) {
           console.error("Erro ao marcar como online:", error);
         }
@@ -85,7 +100,10 @@ export function usePresence() {
         window.removeEventListener("blur", onBlur);
         window.removeEventListener("focus", onFocus);
         // Ao desmontar, marca offline explicitamente
-        update(myStatusRef, { state: "offline", last_active: serverTimestamp() }).catch((error) => {
+        update(myStatusRef, {
+          state: "offline",
+          last_active: serverTimestamp(),
+        }).catch((error) => {
           console.error("Erro ao marcar como offline no cleanup:", error);
         });
       };

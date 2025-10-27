@@ -3,7 +3,6 @@ import {
   collection,
   query,
   where,
-  orderBy,
   onSnapshot,
   addDoc,
   updateDoc,
@@ -203,6 +202,7 @@ export function useUserEventParticipations(
       data.sort((a, b) => {
         const dateA = a.eventDate?.toDate?.() || new Date(0);
         const dateB = b.eventDate?.toDate?.() || new Date(0);
+
         return dateB.getTime() - dateA.getTime();
       });
 

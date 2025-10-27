@@ -12,32 +12,35 @@ import {
   useDisclosure,
 } from "@heroui/modal";
 import { Chip } from "@heroui/chip";
-import { Spinner } from "@heroui/spinner";
 import { Divider } from "@heroui/divider";
-import { Avatar, AvatarGroup } from "@heroui/avatar";
+import { Avatar } from "@heroui/avatar";
 import { Tooltip } from "@heroui/tooltip";
 import { Badge } from "@heroui/badge";
-import { 
-  HiOutlineStar, 
-  HiOutlineCalendar, 
-  HiOutlineGlobeAlt, 
-  HiOutlineEye, 
-  HiOutlineUsers, 
-  HiOutlineCheck, 
+import {
+  HiOutlineStar,
+  HiOutlineCalendar,
+  HiOutlineGlobeAlt,
+  HiOutlineEye,
+  HiOutlineUsers,
+  HiOutlineCheck,
   HiOutlineExternalLink,
-  HiOutlinePlus
+  HiOutlinePlus,
 } from "react-icons/hi";
-import { FiCalendar, FiUsers, FiMapPin, FiClock } from "react-icons/fi";
-import { collection, query, where, onSnapshot, Timestamp } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  Timestamp,
+} from "firebase/firestore";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { addToast } from "@heroui/toast";
 
 import { auth, db } from "../firebase";
 import { Event, EventRegistration } from "../types";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { useOrganizations } from "../hooks/useOrganizations";
 import { useEventRegistrations } from "../hooks/useEventRegistrations";
 import { useRoleManagement } from "../hooks/useRoleManagement";
 import { useUserMembership } from "../hooks/useMemberships";
-import { addToast } from "@heroui/toast";
 
 interface XTreinosPublicosProps {
   currentUserId?: string;
@@ -54,9 +57,10 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false);
   const [selectedRoster, setSelectedRoster] = useState<string[]>([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  
+
   const [user] = useAuthState(auth);
-  const { registerForEvent, loading: registrationLoading } = useEventRegistrations();
+  const { registerForEvent, loading: registrationLoading } =
+    useEventRegistrations();
   const { getRolePermissions } = useRoleManagement();
 
   // Usando props ou valores padrão
@@ -67,8 +71,8 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
 
   // Obter membership do usuário na organização atual
   const { membership: userMembership } = useUserMembership(
-    organization?.id || null, 
-    user?.uid || null
+    organization?.id || null,
+    user?.uid || null,
   );
 
   // Verificar permissões do usuário atual
@@ -81,24 +85,24 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
   // Função para formatar valor da premiação
   const formatPrizeValue = (prizePool: string): string => {
     if (!prizePool) return "";
-    
+
     if (prizePool.includes("R$") || prizePool.includes("$")) {
       return prizePool;
     }
-    
+
     const cleanValue = prizePool.replace(/[^\d.,]/g, "");
-    
+
     if (!cleanValue) return prizePool;
-    
+
     // Converte vírgula para ponto para processamento
     const normalizedValue = cleanValue.replace(",", ".");
     const numericValue = parseFloat(normalizedValue);
-    
+
     if (isNaN(numericValue)) return prizePool;
-    
+
     // Detecta a moeda baseada no valor original
     const currency = prizePool.includes("$") ? "USD" : "BRL";
-    
+
     // Formata conforme a moeda
     if (currency === "BRL") {
       return new Intl.NumberFormat("pt-BR", {
@@ -114,34 +118,42 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
   };
 
   useEffect(() => {
-    // Query para buscar apenas eventos públicos 
+    // Query para buscar apenas eventos públicos
     const eventsQuery = query(
       collection(db, "events"),
-      where("visibility", "==", "public")
+      where("visibility", "==", "public"),
     );
 
     const unsubscribe = onSnapshot(
       eventsQuery,
       (snapshot) => {
         const eventsData: Event[] = [];
+
         snapshot.forEach((doc) => {
           eventsData.push({ id: doc.id, ...doc.data() } as Event);
         });
-        
+
         // Ordenar no cliente por createdAt (mais recente primeiro)
         eventsData.sort((a, b) => {
-          const dateA = a.createdAt instanceof Timestamp ? a.createdAt.toDate() : new Date(a.createdAt);
-          const dateB = b.createdAt instanceof Timestamp ? b.createdAt.toDate() : new Date(b.createdAt);
+          const dateA =
+            a.createdAt instanceof Timestamp
+              ? a.createdAt.toDate()
+              : new Date(a.createdAt);
+          const dateB =
+            b.createdAt instanceof Timestamp
+              ? b.createdAt.toDate()
+              : new Date(b.createdAt);
+
           return dateB.getTime() - dateA.getTime();
         });
-        
+
         setEvents(eventsData);
         setLoading(false);
       },
       (error) => {
         console.error("Erro ao carregar eventos públicos:", error);
         setLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe();
@@ -151,25 +163,29 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
   useEffect(() => {
     if (events.length === 0 || !user) return; // Verificar se o usuário está autenticado
 
-    const eventIds = events.map(event => event.id);
+    const eventIds = events.map((event) => event.id);
     const registrationsQuery = query(
       collection(db, "eventRegistrations"),
-      where("eventId", "in", eventIds)
+      where("eventId", "in", eventIds),
     );
 
     const unsubscribe = onSnapshot(
       registrationsQuery,
       (snapshot) => {
         const registrationsData: EventRegistration[] = [];
+
         snapshot.forEach((doc) => {
-          registrationsData.push({ id: doc.id, ...doc.data() } as EventRegistration);
+          registrationsData.push({
+            id: doc.id,
+            ...doc.data(),
+          } as EventRegistration);
         });
         setRegistrations(registrationsData);
       },
       (error) => {
         console.error("Erro ao carregar registrations:", error);
         setRegistrations([]);
-      }
+      },
     );
 
     return () => unsubscribe();
@@ -178,13 +194,14 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
   // Função para obter o status da inscrição da organização
   const getRegistrationStatus = (eventId: string) => {
     return registrations.find(
-      (reg) => reg.eventId === eventId && reg.managerId === user?.uid
+      (reg) => reg.eventId === eventId && reg.managerId === user?.uid,
     );
   };
 
   // Função para verificar se o usuário atual está no roster
   const getUserRosterStatus = (eventId: string) => {
     const registration = getRegistrationStatus(eventId);
+
     if (!registration || !user?.uid) return null;
 
     if (registration.roster.includes(user.uid)) {
@@ -193,6 +210,7 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
     if (registration.substitutes?.includes(user.uid)) {
       return "reserva";
     }
+
     return "não incluído";
   };
 
@@ -211,7 +229,7 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
     if (isSelected) {
       setSelectedRoster([...selectedRoster, userId]);
     } else {
-      setSelectedRoster(selectedRoster.filter(id => id !== userId));
+      setSelectedRoster(selectedRoster.filter((id) => id !== userId));
     }
   };
 
@@ -219,9 +237,11 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
     if (!selectedEvent || !user || !organization) {
       addToast({
         title: "Erro de Validação",
-        description: "Você precisa estar logado e fazer parte de uma organização para se inscrever",
+        description:
+          "Você precisa estar logado e fazer parte de uma organização para se inscrever",
         color: "danger",
       });
+
       return;
     }
 
@@ -234,7 +254,7 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
         [], // substitutes vazios por enquanto
         selectedEvent, // evento completo para validações
         user.uid, // userId atual para validações
-        userMembership?.role // role do usuário na organização
+        userMembership?.role, // role do usuário na organização
       );
 
       if (success) {
@@ -258,13 +278,15 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
     const event = new CustomEvent("changeTab", {
       detail: "Painel da Organização",
     });
+
     window.dispatchEvent(event);
-    
+
     // Depois de um pequeno delay, disparar evento para mudar para a sub-aba de Eventos
     setTimeout(() => {
       const eventTab = new CustomEvent("changeSubTab", {
         detail: "events",
       });
+
       window.dispatchEvent(eventTab);
     }, 100);
   };
@@ -334,6 +356,7 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
       return `${day}/${month}/${year} às ${hours}:${minutes}`;
     } catch (error) {
       console.error("Erro ao formatar a data:", error);
+
       return "";
     }
   };
@@ -361,47 +384,51 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
             Eventos públicos criados por organizações da comunidade
           </p>
         </div>
-        
+
         {/* Botão Crie seu próprio evento - apenas para usuários com permissão */}
         {canCreateEvents && (
           <Chip
+            className="cursor-pointer hover:bg-default-200 transition-colors"
             color="default"
             variant="flat"
-            className="cursor-pointer hover:bg-default-200 transition-colors"
             onClick={handleCreateEvent}
           >
             <div className="flex items-center gap-2 px-2 py-1">
               <HiOutlinePlus className="w-4 h-4" />
-              <span className="text-sm font-medium">Crie seu próprio evento</span>
+              <span className="text-sm font-medium">
+                Crie seu próprio evento
+              </span>
             </div>
           </Chip>
         )}
       </div>
 
       {/* Informação sobre permissões para Ranked/Pro - apenas se for membro de uma organização */}
-      {(currentUserRole === "ranked" || currentUserRole === "pro") && organization && (
-        <Card className="bg-gray-900 border-gray-700">
-          <CardBody className="py-3">
-            <div className="flex items-center gap-2">
-              <HiOutlineEye className="w-5 h-5 text-gray-400" />
-              <p className="text-sm text-gray-300">
-                <strong>Modo Visualização:</strong> Você pode ver informações
-                dos eventos, mas não pode inscrever a organização.
-              </p>
-            </div>
-          </CardBody>
-        </Card>
-      )}
+      {(currentUserRole === "ranked" || currentUserRole === "pro") &&
+        organization && (
+          <Card className="bg-gray-900 border-gray-700">
+            <CardBody className="py-3">
+              <div className="flex items-center gap-2">
+                <HiOutlineEye className="w-5 h-5 text-gray-400" />
+                <p className="text-sm text-gray-300">
+                  <strong>Modo Visualização:</strong> Você pode ver informações
+                  dos eventos, mas não pode inscrever a organização.
+                </p>
+              </div>
+            </CardBody>
+          </Card>
+        )}
 
       {/* Informação para usuários sem organização ou sem permissão para criar eventos */}
       {!canCreateEvents && user && (
-        <Card 
-          className="bg-gray-900 border-gray-700 hover:bg-gray-800 transition-colors cursor-pointer"
+        <Card
           isPressable
+          className="bg-gray-900 border-gray-700 hover:bg-gray-800 transition-colors cursor-pointer"
           onPress={() => {
             const event = new CustomEvent("changeTab", {
               detail: "Painel da Organização",
             });
+
             window.dispatchEvent(event);
           }}
         >
@@ -409,10 +436,12 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
             <div className="flex items-center gap-2">
               <HiOutlinePlus className="w-5 h-5 text-blue-400" />
               <p className="text-sm text-gray-300">
-                <strong className="text-blue-400 hover:text-blue-300">Quer criar seus próprios eventos?</strong> {!organization 
+                <strong className="text-blue-400 hover:text-blue-300">
+                  Quer criar seus próprios eventos?
+                </strong>{" "}
+                {!organization
                   ? "Crie ou junte-se a uma organização e torne-se Dono, Moderator ou Manager para poder criar eventos públicos ou privados."
-                  : "Você precisa ser Dono, Moderator ou Manager da sua organização para criar eventos."
-                }
+                  : "Você precisa ser Dono, Moderator ou Manager da sua organização para criar eventos."}
               </p>
             </div>
           </CardBody>
@@ -445,7 +474,10 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
             const EventIcon = getEventTypeIcon(event.type);
 
             return (
-              <Card key={event.id} className="hover:shadow-md transition-shadow">
+              <Card
+                key={event.id}
+                className="hover:shadow-md transition-shadow"
+              >
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start w-full">
                     <div className="flex items-start gap-3">
@@ -454,11 +486,15 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-lg">{event.name}</h4>
+                          <h4 className="font-semibold text-lg">
+                            {event.name}
+                          </h4>
                           <Chip
                             color="primary"
                             size="sm"
-                            startContent={<HiOutlineGlobeAlt className="w-3 h-3" />}
+                            startContent={
+                              <HiOutlineGlobeAlt className="w-3 h-3" />
+                            }
                             variant="flat"
                           >
                             Público
@@ -508,13 +544,19 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
                       {registration && (
                         <Badge
                           color={getRegistrationStatusColor(registration.state)}
-                          content={getRegistrationStatusText(registration.state)}
+                          content={getRegistrationStatusText(
+                            registration.state,
+                          )}
                           size="sm"
                         >
                           <Chip
-                            color={getRegistrationStatusColor(registration.state)}
+                            color={getRegistrationStatusColor(
+                              registration.state,
+                            )}
                             size="sm"
-                            startContent={<HiOutlineCheck className="w-3 h-3" />}
+                            startContent={
+                              <HiOutlineCheck className="w-3 h-3" />
+                            }
                             variant="flat"
                           >
                             Inscrito
@@ -523,15 +565,17 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
                       )}
                       {userStatus && (
                         <Chip
-                          color={userStatus === "titular" ? "success" : "warning"}
+                          color={
+                            userStatus === "titular" ? "success" : "warning"
+                          }
                           size="sm"
                           variant="flat"
                         >
                           {userStatus === "titular"
                             ? "Titular"
                             : userStatus === "reserva"
-                            ? "Reserva"
-                            : "Não incluído"}
+                              ? "Reserva"
+                              : "Não incluído"}
                         </Chip>
                       )}
                     </div>
@@ -556,30 +600,32 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
                           Inscrever
                         </Button>
                       )}
-                      
+
                       {/* Mostrar mensagem quando não pode se inscrever */}
-                      {!canRegister && !registration && event.status === "open" && (
-                        <Tooltip
-                          content={
-                            userMembership?.role === "owner"
-                              ? "Owners não podem inscrever a própria organização"
-                              : event.createdBy === user?.uid
-                              ? "Você criou este evento"
-                              : event.hostOrgId === organization?.id
-                              ? "Sua organização hospeda este evento"
-                              : "Inscrições não disponíveis"
-                          }
-                        >
-                          <Button
-                            color="default"
-                            size="sm"
-                            variant="flat"
-                            isDisabled
+                      {!canRegister &&
+                        !registration &&
+                        event.status === "open" && (
+                          <Tooltip
+                            content={
+                              userMembership?.role === "owner"
+                                ? "Owners não podem inscrever a própria organização"
+                                : event.createdBy === user?.uid
+                                  ? "Você criou este evento"
+                                  : event.hostOrgId === organization?.id
+                                    ? "Sua organização hospeda este evento"
+                                    : "Inscrições não disponíveis"
+                            }
                           >
-                            Não Disponível
-                          </Button>
-                        </Tooltip>
-                      )}
+                            <Button
+                              isDisabled
+                              color="default"
+                              size="sm"
+                              variant="flat"
+                            >
+                              Não Disponível
+                            </Button>
+                          </Tooltip>
+                        )}
                     </div>
                   </div>
                 </CardBody>
@@ -652,13 +698,17 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
 
                 {/* Configurações do Roster */}
                 <div>
-                  <h4 className="font-semibold mb-2">Configurações do Roster</h4>
+                  <h4 className="font-semibold mb-2">
+                    Configurações do Roster
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <p className="text-default-600">
-                      <strong>Mínimo:</strong> {selectedEvent.rosterMin} jogadores
+                      <strong>Mínimo:</strong> {selectedEvent.rosterMin}{" "}
+                      jogadores
                     </p>
                     <p className="text-default-600">
-                      <strong>Máximo:</strong> {selectedEvent.rosterMax} jogadores
+                      <strong>Máximo:</strong> {selectedEvent.rosterMax}{" "}
+                      jogadores
                     </p>
                   </div>
                 </div>
@@ -683,7 +733,9 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
                       href={selectedEvent.rulesURL}
                       rel="noopener noreferrer"
                       size="sm"
-                      startContent={<HiOutlineExternalLink className="w-4 h-4" />}
+                      startContent={
+                        <HiOutlineExternalLink className="w-4 h-4" />
+                      }
                       target="_blank"
                       variant="bordered"
                     >
@@ -693,7 +745,8 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
                 )}
 
                 {/* Informação sobre limitações para Ranked/Pro */}
-                {(currentUserRole === "ranked" || currentUserRole === "pro") && (
+                {(currentUserRole === "ranked" ||
+                  currentUserRole === "pro") && (
                   <div className="p-4 bg-gray-900 border border-gray-700 rounded-lg">
                     <div className="flex items-start gap-2">
                       <HiOutlineEye className="w-5 h-5 text-gray-400 mt-0.5" />
@@ -704,8 +757,8 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
                           <strong>
                             {currentUserRole === "ranked" ? "Ranked" : "Pro"}
                           </strong>
-                          , você pode visualizar as informações do evento, mas não
-                          pode inscrever a organização ou gerenciar rosters.
+                          , você pode visualizar as informações do evento, mas
+                          não pode inscrever a organização ou gerenciar rosters.
                         </p>
                       </div>
                     </div>
@@ -760,15 +813,9 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
                 <div className="p-4 bg-default-50 rounded-lg">
                   <h4 className="font-medium mb-2">Requisitos do Roster</h4>
                   <div className="text-sm text-default-600 space-y-1">
-                    <p>
-                      • Mínimo: {selectedEvent.rosterMin} jogadores
-                    </p>
-                    <p>
-                      • Máximo: {selectedEvent.rosterMax} jogadores
-                    </p>
-                    <p>
-                      • Selecionados: {selectedRoster.length} jogadores
-                    </p>
+                    <p>• Mínimo: {selectedEvent.rosterMin} jogadores</p>
+                    <p>• Máximo: {selectedEvent.rosterMax} jogadores</p>
+                    <p>• Selecionados: {selectedRoster.length} jogadores</p>
                   </div>
                 </div>
 
@@ -781,9 +828,9 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
                     >
                       <div className="flex items-center gap-3">
                         <Avatar
+                          name={member.userData.name}
                           size="sm"
                           src={member.userData.avatar}
-                          name={member.userData.name}
                         />
                         <div>
                           <p className="font-medium">{member.userData.name}</p>
@@ -793,12 +840,12 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
                         </div>
                       </div>
                       <input
-                        type="checkbox"
                         checked={selectedRoster.includes(member.userId)}
+                        className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500"
+                        type="checkbox"
                         onChange={(e) =>
                           handleRosterSelection(member.userId, e.target.checked)
                         }
-                        className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500"
                       />
                     </div>
                   ))}
@@ -807,11 +854,7 @@ export default function XTreinosPublicos(props?: XTreinosPublicosProps) {
             )}
           </ModalBody>
           <ModalFooter>
-            <Button
-              color="default"
-              variant="light"
-              onClick={onClose}
-            >
+            <Button color="default" variant="light" onClick={onClose}>
               Cancelar
             </Button>
             {canCreateEvents && (

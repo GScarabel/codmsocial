@@ -44,11 +44,11 @@ import {
   DropdownItem,
 } from "@heroui/dropdown";
 import { Chip } from "@heroui/chip";
+import { useRouter } from "next/navigation";
 
 import { db } from "./firebase";
 import { Post, PostReaction, ChatOverview, ChatMessage } from "./types";
 import Chat from "./Chat";
-import { useRouter } from "next/navigation";
 import { usePresence } from "./hooks/usePresence";
 
 interface FeedProps {
@@ -128,7 +128,7 @@ const FeedWithChat: React.FC<FeedProps> = ({
     { name: "Uau", emoji: "😮" },
     { name: "Triste", emoji: "😢" },
     { name: "Grr", emoji: "😡" },
-    { name: "Fogo", emoji: "🔥" }
+    { name: "Fogo", emoji: "🔥" },
   ];
 
   const [showChatDrawer, setShowChatDrawer] = useState(false);
@@ -619,15 +619,15 @@ const FeedWithChat: React.FC<FeedProps> = ({
               <CardHeader className="flex items-center gap-3">
                 {p.authorId !== user.uid ? (
                   <Tooltip content="Visitar perfil" placement="top">
-                  <div className="relative">
-                    <Avatar
-                      alt={p.authorName}
-                      className="h-10 w-10 cursor-pointer"
-                      src={p.authorAvatar || "/default-avatar.png"}
-                      onClick={() => router.push(`/perfil/${p.authorId}`)}
-                    />
-                  </div>
-                </Tooltip>
+                    <div className="relative">
+                      <Avatar
+                        alt={p.authorName}
+                        className="h-10 w-10 cursor-pointer"
+                        src={p.authorAvatar || "/default-avatar.png"}
+                        onClick={() => router.push(`/perfil/${p.authorId}`)}
+                      />
+                    </div>
+                  </Tooltip>
                 ) : (
                   <div className="relative">
                     <Avatar
@@ -642,9 +642,9 @@ const FeedWithChat: React.FC<FeedProps> = ({
                     <div className="flex flex-col">
                       <span className="font-medium flex items-center gap-1">
                         {p.authorTag && (
-<span className="text-[14px] mr-0 ml-0 text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)] animate-pulse">
-  {p.authorTag}
-</span>
+                          <span className="text-[14px] mr-0 ml-0 text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)] animate-pulse">
+                            {p.authorTag}
+                          </span>
                         )}
                         {p.authorName}
                       </span>
@@ -807,32 +807,43 @@ const FeedWithChat: React.FC<FeedProps> = ({
                               className="flex flex-col  pb-2 last:border-none"
                             >
                               <div className="flex items-center gap-2">
-            {c.authorId !== user.uid ? (
-    <Tooltip content="Visitar perfil" placement="top">
-      <div className="relative">
-        <Avatar
-          size="sm"
-          src={c.authorAvatar || "/default-avatar.png"}
-          className="cursor-pointer"
-          onClick={() => router.push(`/perfil/${c.authorId}`)}
-        />
-      </div>
-    </Tooltip>
-  ) : (
-    <div className="relative">
-      <Avatar
-        size="sm"
-        src={c.authorAvatar || "/default-avatar.png"}
-      />
-    </div>
-  )}
+                                {c.authorId !== user.uid ? (
+                                  <Tooltip
+                                    content="Visitar perfil"
+                                    placement="top"
+                                  >
+                                    <div className="relative">
+                                      <Avatar
+                                        className="cursor-pointer"
+                                        size="sm"
+                                        src={
+                                          c.authorAvatar ||
+                                          "/default-avatar.png"
+                                        }
+                                        onClick={() =>
+                                          router.push(`/perfil/${c.authorId}`)
+                                        }
+                                      />
+                                    </div>
+                                  </Tooltip>
+                                ) : (
+                                  <div className="relative">
+                                    <Avatar
+                                      size="sm"
+                                      src={
+                                        c.authorAvatar || "/default-avatar.png"
+                                      }
+                                    />
+                                  </div>
+                                )}
                                 <div className="flex flex-col">
                                   <span className="text-[13px] text-gray-200 -mt-0">
-                                    {c.authorTag && c.authorTag.trim() !== "" && (
-<span className="text-[14px] mr-2 ml-0 text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)] animate-pulse">
-   {c.authorTag}
-</span>
-                                    )}
+                                    {c.authorTag &&
+                                      c.authorTag.trim() !== "" && (
+                                        <span className="text-[14px] mr-2 ml-0 text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)] animate-pulse">
+                                          {c.authorTag}
+                                        </span>
+                                      )}
                                     {c.authorName}
                                     <span className="text-[8px] text-gray-500 italic ml-1">
                                       {c.createdAt?.toDate
@@ -954,44 +965,53 @@ const FeedWithChat: React.FC<FeedProps> = ({
             {likesUsers.length === 0 ? (
               <p>Sem reacao ainda.</p>
             ) : (
-             <Listbox
-  aria-label="Lista de usuários que curtiram"
-  classNames={{
-    base: "w-full max-w-[280px] -mt-3",
-    list: "max-h-[300px] overflow-y-auto",
-  }}
->
-  {likesUsers.map((u) => (
-   <ListboxItem key={u.uid} textValue={u.name}>
-  {u.uid !== user.uid ? (
-    <Tooltip content="Visitar perfil" placement="top">
-      <div
-        className="flex items-center gap-2 cursor-pointer hover:bg-gray-700/20 rounded-md p-1 transition-colors"
-        onClick={() => router.push(`/perfil/${u.uid}`)}
-      >
-        <Avatar
-          alt={u.name}
-          className="h-8 w-8 rounded-full"
-          src={u.avatar || "/default-avatar.png"}
-        />
-        <span className="font-medium">{u.name}</span>
-        <span className="ml-2 text-lg">{u.reactionEmoji}</span>
-      </div>
-    </Tooltip>
-  ) : (
-    <div className="flex items-center gap-2">
-      <Avatar
-        alt={u.name}
-        className="h-8 w-8 rounded-full"
-        src={u.avatar || "/default-avatar.png"}
-      />
-      <span className="font-medium">{u.name}</span>
-      <span className="ml-2 text-lg">{u.reactionEmoji}</span>
-    </div>
-  )}
-</ListboxItem>
-  ))}
-</Listbox>
+              <Listbox
+                aria-label="Lista de usuários que curtiram"
+                classNames={{
+                  base: "w-full max-w-[280px] -mt-3",
+                  list: "max-h-[300px] overflow-y-auto",
+                }}
+              >
+                {likesUsers.map((u) => (
+                  <ListboxItem key={u.uid} textValue={u.name}>
+                    {u.uid !== user.uid ? (
+                      <Tooltip content="Visitar perfil" placement="top">
+                        <div
+                          className="flex items-center gap-2 cursor-pointer hover:bg-gray-700/20 rounded-md p-1 transition-colors"
+                          role="button"
+                          tabIndex={0} // permite foco via teclado
+                          onClick={() => router.push(`/perfil/${u.uid}`)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              router.push(`/perfil/${u.uid}`);
+                            }
+                          }}
+                        >
+                          <Avatar
+                            alt={u.name}
+                            className="h-8 w-8 rounded-full"
+                            src={u.avatar || "/default-avatar.png"}
+                          />
+                          <span className="font-medium">{u.name}</span>
+                          <span className="ml-2 text-lg">
+                            {u.reactionEmoji}
+                          </span>
+                        </div>
+                      </Tooltip>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Avatar
+                          alt={u.name}
+                          className="h-8 w-8 rounded-full"
+                          src={u.avatar || "/default-avatar.png"}
+                        />
+                        <span className="font-medium">{u.name}</span>
+                        <span className="ml-2 text-lg">{u.reactionEmoji}</span>
+                      </div>
+                    )}
+                  </ListboxItem>
+                ))}
+              </Listbox>
             )}
           </ModalBody>
           <ModalFooter>

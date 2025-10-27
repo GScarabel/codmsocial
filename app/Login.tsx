@@ -14,11 +14,7 @@ import {
   isSignInWithEmailLink,
   signInWithEmailLink,
 } from "firebase/auth";
-import {
-  doc,
-  setDoc,
-  serverTimestamp,
-} from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 import { auth, db } from "./firebase";
 
@@ -98,11 +94,16 @@ const Login: React.FC<LoginProps> = ({ handleGoogleLogin }) => {
 
     setIsLoading(true);
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
+      const result = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
       const user = result.user;
 
       // Criar documento na coleção Users
       const userRef = doc(db, "Users", user.uid);
+
       await setDoc(userRef, {
         displayName: user.displayName || user.email?.split("@")[0] || "Usuário",
         email: user.email,

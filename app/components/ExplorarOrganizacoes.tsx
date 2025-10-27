@@ -45,13 +45,19 @@ import { Organization, Membership } from "../types";
 
 // Função helper para logs apenas em desenvolvimento
 function devLog(...args: any[]) {
-  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+  if (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+  ) {
     console.log(...args);
   }
 }
 
 function devError(...args: any[]) {
-  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+  if (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+  ) {
     console.error(...args);
   }
 }
@@ -304,10 +310,17 @@ const ExplorarOrganizacoes: React.FC<ExplorarOrganizacoesProps> = ({
       );
 
       devLog(`📊 Total de documentos em memberships: ${membersData.length}`);
-      devLog(`📊 Membros por status:`, membersData.reduce((acc, member) => {
-        acc[member.status] = (acc[member.status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>));
+      devLog(
+        `📊 Membros por status:`,
+        membersData.reduce(
+          (acc, member) => {
+            acc[member.status] = (acc[member.status] || 0) + 1;
+
+            return acc;
+          },
+          {} as Record<string, number>,
+        ),
+      );
 
       // Buscar dados dos usuários para cada membro
       const membersWithUserData = await Promise.all(
@@ -315,10 +328,14 @@ const ExplorarOrganizacoes: React.FC<ExplorarOrganizacoesProps> = ({
           try {
             // Primeiro tenta buscar no documento do membership
             if (member.displayName && member.photoURL) {
-              devLog(`[DEBUG] Usando dados do membership para ${member.userId}:`, {
-                displayName: member.displayName,
-                photoURL: member.photoURL
-              });
+              devLog(
+                `[DEBUG] Usando dados do membership para ${member.userId}:`,
+                {
+                  displayName: member.displayName,
+                  photoURL: member.photoURL,
+                },
+              );
+
               return {
                 ...member,
                 displayName: member.displayName,
@@ -326,27 +343,35 @@ const ExplorarOrganizacoes: React.FC<ExplorarOrganizacoesProps> = ({
               };
             }
 
-            devLog(`[DEBUG] 🔍 Buscando dados do usuário ${member.userId} na coleção Users...`);
+            devLog(
+              `[DEBUG] 🔍 Buscando dados do usuário ${member.userId} na coleção Users...`,
+            );
             const userDoc = await getDoc(doc(db, "Users", member.userId));
 
             if (userDoc.exists()) {
               const userData = userDoc.data();
+
               devLog(`[DEBUG] Dados encontrados para ${member.userId}:`, {
                 displayName: userData.displayName,
                 name: userData.name,
                 email: userData.email,
                 photoURL: userData.photoURL,
-                avatar: userData.avatar
+                avatar: userData.avatar,
               });
 
               return {
                 ...member,
                 displayName:
-                  userData.displayName || userData.name || userData.email || "Usuário",
+                  userData.displayName ||
+                  userData.name ||
+                  userData.email ||
+                  "Usuário",
                 photoURL: userData.photoURL || userData.avatar || "",
               };
             } else {
-              devError(`❌ Documento do usuário ${member.userId} não encontrado na coleção Users`);
+              devError(
+                `❌ Documento do usuário ${member.userId} não encontrado na coleção Users`,
+              );
             }
 
             // Fallback se não encontrar o usuário
@@ -430,11 +455,11 @@ const ExplorarOrganizacoes: React.FC<ExplorarOrganizacoesProps> = ({
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <Select
+              aria-label="Filtrar organizações por visibilidade"
               className="w-full sm:w-48"
               placeholder="Filtrar por visibilidade"
               selectedKeys={[visibilityFilter]}
               startContent={<HiOutlineFilter className="w-4 h-4" />}
-              aria-label="Filtrar organizações por visibilidade"
               onSelectionChange={(keys) =>
                 setVisibilityFilter(Array.from(keys)[0] as string)
               }
@@ -593,7 +618,9 @@ const ExplorarOrganizacoes: React.FC<ExplorarOrganizacoesProps> = ({
                             >
                               Solicitação pendente
                             </Chip>
-                          ) : !isMemberOfAnyOrg && !userHasAnyPendingRequest && org.visibility === "public" ? (
+                          ) : !isMemberOfAnyOrg &&
+                            !userHasAnyPendingRequest &&
+                            org.visibility === "public" ? (
                             <div className="w-full flex flex-col gap-2">
                               <Button
                                 className="w-full"
@@ -653,7 +680,7 @@ const ExplorarOrganizacoes: React.FC<ExplorarOrganizacoesProps> = ({
         <Modal isOpen={modalOpen} size="lg" onClose={() => setModalOpen(false)}>
           <ModalContent>
             <ModalHeader className="flex flex-col gap-1">
-              <h3>{`Membros de ${modalOrgName} (${modalMembersWithUserData.length} total, ${modalMembersWithUserData.filter(member => member.status === "accepted").length} aceitos)`}</h3>
+              <h3>{`Membros de ${modalOrgName} (${modalMembersWithUserData.length} total, ${modalMembersWithUserData.filter((member) => member.status === "accepted").length} aceitos)`}</h3>
               <Input
                 className="mt-2"
                 placeholder="Filtrar membros por nome..."
@@ -742,15 +769,17 @@ const ExplorarOrganizacoes: React.FC<ExplorarOrganizacoesProps> = ({
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Botão Ver Perfil */}
                       {member.userId !== user?.uid && (
                         <Button
-                          size="sm"
-                          variant="flat"
                           color="primary"
+                          size="sm"
                           startContent={<HiOutlineUser className="w-4 h-4" />}
-                          onClick={() => router.push(`/perfil/${member.userId}`)}
+                          variant="flat"
+                          onClick={() =>
+                            router.push(`/perfil/${member.userId}`)
+                          }
                         >
                           Ver Perfil
                         </Button>

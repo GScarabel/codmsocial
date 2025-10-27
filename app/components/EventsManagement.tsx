@@ -37,7 +37,6 @@ import {
   serverTimestamp,
   onSnapshot,
   query,
-  orderBy,
   where,
   Timestamp,
   doc,
@@ -203,9 +202,7 @@ const EventsManagement: React.FC<EventsManagementProps> = ({
 
   React.useEffect(() => {
     // Query simples para evitar erro de índice
-    const eventsQuery = query(
-      collection(db, "events")
-    );
+    const eventsQuery = query(collection(db, "events"));
 
     const unsubscribe = onSnapshot(
       eventsQuery,
@@ -215,14 +212,21 @@ const EventsManagement: React.FC<EventsManagementProps> = ({
         snapshot.forEach((doc) => {
           eventsData.push({ id: doc.id, ...doc.data() } as Event);
         });
-        
+
         // Ordenar no cliente por createdAt (mais recente primeiro)
         eventsData.sort((a, b) => {
-          const dateA = a.createdAt instanceof Timestamp ? a.createdAt.toDate() : new Date(a.createdAt);
-          const dateB = b.createdAt instanceof Timestamp ? b.createdAt.toDate() : new Date(b.createdAt);
+          const dateA =
+            a.createdAt instanceof Timestamp
+              ? a.createdAt.toDate()
+              : new Date(a.createdAt);
+          const dateB =
+            b.createdAt instanceof Timestamp
+              ? b.createdAt.toDate()
+              : new Date(b.createdAt);
+
           return dateB.getTime() - dateA.getTime();
         });
-        
+
         setEvents(eventsData);
         setLoading(false);
       },
@@ -408,13 +412,13 @@ const EventsManagement: React.FC<EventsManagementProps> = ({
     setDeleteEventLoading(true);
     try {
       await deleteDoc(doc(db, "events", selectedEvent.id));
-      
+
       addToast({
         title: "Sucesso",
         description: "Evento excluído com sucesso!",
         color: "success",
       });
-      
+
       setShowDeleteModal(false);
       setSelectedEvent(null);
     } catch (error) {
@@ -550,20 +554,20 @@ const EventsManagement: React.FC<EventsManagementProps> = ({
   React.useEffect(() => {
     if (events.length === 0) return;
 
-    const eventIds = events.map(event => event.id);
-    
+    const eventIds = events.map((event) => event.id);
+
     // Buscar registrations da própria organização para os eventos
     const ownRegistrationsQuery = query(
       collection(db, "eventRegistrations"),
       where("eventId", "in", eventIds),
-      where("orgId", "==", organization.id)
+      where("orgId", "==", organization.id),
     );
 
     // Buscar registrations de eventos criados pela organização (para ver outras organizações inscritas)
     const hostedEventsIds = events
-      .filter(event => event.hostOrgId === organization.id)
-      .map(event => event.id);
-    
+      .filter((event) => event.hostOrgId === organization.id)
+      .map((event) => event.id);
+
     const registrationsData: EventRegistration[] = [];
     const unsubscribes: (() => void)[] = [];
 
@@ -572,56 +576,69 @@ const EventsManagement: React.FC<EventsManagementProps> = ({
       ownRegistrationsQuery,
       (snapshot) => {
         // Limpar registrations da própria org
-        const filteredData = registrationsData.filter(reg => reg.orgId !== organization.id);
-        
+        const filteredData = registrationsData.filter(
+          (reg) => reg.orgId !== organization.id,
+        );
+
         snapshot.forEach((doc) => {
           filteredData.push({ id: doc.id, ...doc.data() } as EventRegistration);
         });
-        
+
         setRegistrations([...filteredData]);
       },
       (error) => {
         console.error("Erro ao carregar registrations da organização:", error);
-      }
+      },
     );
+
     unsubscribes.push(ownUnsubscribe);
 
     // Listener para registrations de eventos hospedados pela organização (se houver)
     if (hostedEventsIds.length > 0) {
       const hostedRegistrationsQuery = query(
         collection(db, "eventRegistrations"),
-        where("eventId", "in", hostedEventsIds)
+        where("eventId", "in", hostedEventsIds),
       );
 
       const hostedUnsubscribe = onSnapshot(
         hostedRegistrationsQuery,
         (snapshot) => {
           // Limpar registrations de eventos hospedados
-          const filteredData = registrationsData.filter(reg => 
-            !hostedEventsIds.includes(reg.eventId) || reg.orgId === organization.id
+          const filteredData = registrationsData.filter(
+            (reg) =>
+              !hostedEventsIds.includes(reg.eventId) ||
+              reg.orgId === organization.id,
           );
-          
+
           snapshot.forEach((doc) => {
             const regData = { id: doc.id, ...doc.data() } as EventRegistration;
+
             // Evitar duplicatas da própria organização
             if (regData.orgId !== organization.id) {
               filteredData.push(regData);
             }
           });
-          
+
           // Adicionar registrations da própria org
-          const ownRegs = registrationsData.filter(reg => reg.orgId === organization.id);
+          const ownRegs = registrationsData.filter(
+            (reg) => reg.orgId === organization.id,
+          );
+
           setRegistrations([...filteredData, ...ownRegs]);
         },
         (error) => {
-          console.error("Erro ao carregar registrations de eventos hospedados:", error);
-        }
+          console.error(
+            "Erro ao carregar registrations de eventos hospedados:",
+            error,
+          );
+        },
       );
+
       unsubscribes.push(hostedUnsubscribe);
     }
 
     return () => {
-      unsubscribes.forEach(unsub => unsub());
+      unsubscribes.forEach((unsub) => unsub());
     };
   }, [events, organization.id]);
 
@@ -1753,13 +1770,17 @@ const EventsManagement: React.FC<EventsManagementProps> = ({
                   trigger: "bg-default-100",
                   label: "text-default-700",
                 }}
-                label="Visibilidade do Evento"
                 description="Eventos públicos aparecem na aba X-Treinos para todas as organizações. Eventos privados são visíveis apenas no painel da sua organização."
+                label="Visibilidade do Evento"
                 selectedKeys={[eventForm.visibility]}
                 variant="bordered"
                 onSelectionChange={(keys) => {
                   const selected = Array.from(keys)[0] as EventVisibility;
-                  if (selected && (selected === "public" || selected === "private")) {
+
+                  if (
+                    selected &&
+                    (selected === "public" || selected === "private")
+                  ) {
                     setEventForm({ ...eventForm, visibility: selected });
                   }
                 }}
@@ -1817,8 +1838,8 @@ const EventsManagement: React.FC<EventsManagementProps> = ({
       {/* Modal de Confirmação de Exclusão */}
       <Modal
         isOpen={showDeleteModal}
-        onOpenChange={setShowDeleteModal}
         size="md"
+        onOpenChange={setShowDeleteModal}
       >
         <ModalContent>
           {(onClose) => (
@@ -1827,14 +1848,14 @@ const EventsManagement: React.FC<EventsManagementProps> = ({
                 Confirmar Exclusão
               </ModalHeader>
               <ModalBody>
-                 <p>
-                   Tem certeza que deseja excluir o evento{" "}
-                   <strong>{selectedEvent?.name}</strong>?
-                 </p>
-                 <p className="text-danger text-sm">
-                   Esta ação não pode ser desfeita.
-                 </p>
-               </ModalBody>
+                <p>
+                  Tem certeza que deseja excluir o evento{" "}
+                  <strong>{selectedEvent?.name}</strong>?
+                </p>
+                <p className="text-danger text-sm">
+                  Esta ação não pode ser desfeita.
+                </p>
+              </ModalBody>
               <ModalFooter>
                 <Button color="default" variant="light" onPress={onClose}>
                   Cancelar

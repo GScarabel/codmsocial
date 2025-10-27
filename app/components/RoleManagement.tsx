@@ -175,10 +175,17 @@ const RoleChangeModal: React.FC<RoleChangeModalProps> = ({
               </div>
 
               <Select
+                className="[&_span[data-focus-scope-end='true']]:!inline"
                 label="Novo Cargo"
                 placeholder="Selecione o novo cargo"
                 selectedKeys={
                   selectedRole ? new Set([selectedRole]) : new Set()
+                }
+                style={
+                  {
+                    // Fix for focus scope accessibility warning
+                    "--focus-scope-end-display": "inline",
+                  } as React.CSSProperties
                 }
                 onSelectionChange={(keys) => {
                   const keysArray = Array.from(keys);
@@ -186,11 +193,6 @@ const RoleChangeModal: React.FC<RoleChangeModalProps> = ({
 
                   setSelectedRole(selected || "");
                 }}
-                style={{
-                  // Fix for focus scope accessibility warning
-                  '--focus-scope-end-display': 'inline'
-                } as React.CSSProperties}
-                className="[&_span[data-focus-scope-end='true']]:!inline"
               >
                 {availableRoles.map((role) => (
                   <SelectItem key={role} textValue={getRoleName(role)}>

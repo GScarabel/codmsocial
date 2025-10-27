@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
+
 import { db, auth } from "../firebase";
 
 interface UserPresence {
@@ -26,6 +27,7 @@ export function useSafeUserPresence(userId: string) {
         presence: "offline",
         privacy: { lastSeen: "everyone" },
       });
+
       return;
     }
 
@@ -37,6 +39,7 @@ export function useSafeUserPresence(userId: string) {
         presence: "offline",
         privacy: { lastSeen: "everyone" },
       });
+
       return;
     }
 
@@ -44,9 +47,10 @@ export function useSafeUserPresence(userId: string) {
       try {
         const userRef = doc(db, "Users", userId);
         const docSnap = await getDoc(userRef);
-        
+
         if (docSnap.exists()) {
           const data = docSnap.data();
+
           setPresence({
             isOnline: data.isOnline || false,
             presence: data.presence || "offline",

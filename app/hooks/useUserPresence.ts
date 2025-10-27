@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
+
 import { db } from "../firebase";
 
 interface UserPresence {
@@ -26,6 +27,7 @@ export function useUserPresence(userId: string) {
         presence: "offline",
         privacy: { lastSeen: "everyone" },
       });
+
       return;
     }
 
@@ -33,10 +35,11 @@ export function useUserPresence(userId: string) {
     // e se não for o próprio usuário (para evitar loops)
     const userRef = doc(db, "Users", userId);
     const unsubscribe = onSnapshot(
-      userRef, 
+      userRef,
       (doc) => {
         if (doc.exists()) {
           const data = doc.data();
+
           setPresence({
             isOnline: data.isOnline || false,
             presence: data.presence || "offline",
@@ -63,7 +66,7 @@ export function useUserPresence(userId: string) {
           presence: "offline",
           privacy: { lastSeen: "everyone" },
         });
-      }
+      },
     );
 
     return () => unsubscribe();
