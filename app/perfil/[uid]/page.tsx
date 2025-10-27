@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import PerfilUsuario from "../../components/PerfilUsuario";
 import Perfil from "@/app/components/Perfil";
 
 interface PerfilPageProps {

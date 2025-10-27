@@ -242,46 +242,68 @@ useEffect(() => {
     fetchProfile();
   }, [userId]);
 
- const handleSave = async () => {
+const handleSave = async () => {
   const uidToSave = user?.uid || authUser?.uid;
   if (!uidToSave) return;
 
   try {
     const userRef = doc(db, "Users", uidToSave);
 
-    // Atualiza no Firestore
     await updateDoc(userRef, {
       displayName: name,
-      photoURL: avatar,
+      photoUrl: avatar,
       organizationTag,
       privacy: {
         lastSeen: privacyLastSeen,
       },
     });
 
-    // Atualiza no Auth (Firebase Authentication)
     if (auth.currentUser) {
       await updateProfile(auth.currentUser, {
         displayName: name,
-        photoURL: avatar,
+        photoURL: avatar, // Auth usa photoURL
       });
     }
 
-    // Atualiza o estado local do usuário (imediato, sem reload)
-    setUser((prev) => ({
-      ...prev,
+    // ✅ Atualiza estado local com segurança de tipo
+    setUser((prev): PerfilUser => ({
+      ...(prev ?? {
+        uid: uidToSave,
+        displayName: "",
+        email: "",
+        photoUrl: "",
+        organizationTag: "",
+        createdAt: new Date(),
+        organizationRole: "",
+        isOnline: false,
+        presence: "offline",
+        lastSeen: null,
+        privacy: { lastSeen: "everyone" },
+      }),
       displayName: name,
-      photoURL: avatar,
+      photoUrl: avatar,
       organizationTag,
       privacy: { lastSeen: privacyLastSeen },
     }));
 
-    // Se existir o estado 'profileUser' (exibido no <h2>), atualiza também
+    // ✅ Atualiza também o perfil exibido no <h2>
     if (typeof setProfileUser === "function") {
-      setProfileUser((prev) => ({
-        ...prev,
+      setProfileUser((prev): PerfilUser => ({
+        ...(prev ?? {
+          uid: uidToSave,
+          displayName: "",
+          email: "",
+          photoUrl: "",
+          organizationTag: "",
+          createdAt: new Date(),
+          organizationRole: "",
+          isOnline: false,
+          presence: "offline",
+          lastSeen: null,
+          privacy: { lastSeen: "everyone" },
+        }),
         displayName: name,
-        photoURL: avatar,
+        photoUrl: avatar,
         organizationTag,
         privacy: { lastSeen: privacyLastSeen },
       }));
@@ -303,6 +325,7 @@ useEffect(() => {
     });
   }
 };
+
   // --- Salva avatar ---
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.[0]) return;
