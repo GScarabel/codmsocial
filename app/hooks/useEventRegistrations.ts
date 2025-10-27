@@ -38,23 +38,19 @@ export const useEventRegistrations = () => {
       if (event && event.hostOrgId === orgId) {
         addToast({
           title: "Inscrição Não Permitida",
-          description:
-            "A organização hospedeira não pode se inscrever no próprio evento",
+          description: "A organização hospedeira não pode se inscrever no próprio evento",
           color: "warning",
         });
-
         return false;
       }
 
       // Validação: Verificar se o usuário é o criador do evento
       if (event && event.createdBy === currentUserId) {
         addToast({
-          title: "Inscrição Não Permitida",
-          description:
-            "O criador do evento não pode inscrever sua organização no próprio evento",
+          title: "Inscrição Não Permitida", 
+          description: "O criador do evento não pode inscrever sua organização no próprio evento",
           color: "warning",
         });
-
         return false;
       }
 
@@ -62,11 +58,9 @@ export const useEventRegistrations = () => {
       if (userRole === "owner") {
         addToast({
           title: "Inscrição Não Permitida",
-          description:
-            "Owners não podem inscrever a própria organização em eventos. Apenas membros podem se inscrever.",
+          description: "Owners não podem inscrever a própria organização em eventos. Apenas membros podem se inscrever.",
           color: "warning",
         });
-
         return false;
       }
 
@@ -112,28 +106,25 @@ export const useEventRegistrations = () => {
       return true;
     } catch (error) {
       console.error("Erro ao inscrever no evento:", error);
-
+      
       // Melhor tratamento de erros para UX
       if (error instanceof Error) {
         if (error.message.includes("Missing or insufficient permissions")) {
           addToast({
             title: "Erro de Permissão",
-            description:
-              "Você não tem permissão para realizar esta inscrição. Verifique se sua organização está ativa.",
+            description: "Você não tem permissão para realizar esta inscrição. Verifique se sua organização está ativa.",
             color: "danger",
           });
         } else if (error.message.includes("network")) {
           addToast({
             title: "Erro de Conexão",
-            description:
-              "Verifique sua conexão com a internet e tente novamente.",
+            description: "Verifique sua conexão com a internet e tente novamente.",
             color: "danger",
           });
         } else {
           addToast({
             title: "Erro na Inscrição",
-            description:
-              "Ocorreu um erro inesperado. Tente novamente em alguns instantes.",
+            description: "Ocorreu um erro inesperado. Tente novamente em alguns instantes.",
             color: "danger",
           });
         }

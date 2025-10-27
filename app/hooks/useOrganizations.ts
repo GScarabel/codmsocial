@@ -15,19 +15,13 @@ import { Organization, Membership } from "../types";
 
 // Função helper para logs apenas em desenvolvimento
 function devLog(...args: any[]) {
-  if (
-    window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1"
-  ) {
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
     console.log(...args);
   }
 }
 
 function devError(...args: any[]) {
-  if (
-    window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1"
-  ) {
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
     console.error(...args);
   }
 }
@@ -77,7 +71,7 @@ export const useUserOrganizations = (userId: string | null) => {
 
   useEffect(() => {
     devLog("useUserOrganizations - userId:", userId);
-
+    
     if (!userId) {
       devLog("useUserOrganizations - No userId, setting empty array");
       setUserOrganizations([]);
@@ -88,10 +82,7 @@ export const useUserOrganizations = (userId: string | null) => {
 
     const loadUserOrganizations = async () => {
       try {
-        devLog(
-          "useUserOrganizations - Starting to load organizations for userId:",
-          userId,
-        );
+        devLog("useUserOrganizations - Starting to load organizations for userId:", userId);
         setLoading(true);
 
         // Buscar organizações onde o usuário é owner
@@ -109,9 +100,7 @@ export const useUserOrganizations = (userId: string | null) => {
         });
 
         // Buscar organizações onde o usuário é membro (via coleção global memberships)
-        devLog(
-          "useUserOrganizations - Searching for memberships where user is member",
-        );
+        devLog("useUserOrganizations - Searching for memberships where user is member");
 
         const membershipsQuery = query(
           collection(db, "memberships"),
@@ -121,21 +110,15 @@ export const useUserOrganizations = (userId: string | null) => {
 
         const membershipsSnapshot = await getDocs(membershipsQuery);
 
-        devLog(
-          "useUserOrganizations - Found memberships:",
-          membershipsSnapshot.size,
-        );
-
+        devLog("useUserOrganizations - Found memberships:", membershipsSnapshot.size);
+          
         const memberOrgs: Organization[] = [];
 
         // Para cada membership, buscar a organização correspondente
         for (const membershipDoc of membershipsSnapshot.docs) {
           const membershipData = membershipDoc.data() as Membership;
 
-          devLog(
-            "useUserOrganizations - Processing membership for org:",
-            membershipData.organizationId,
-          );
+          devLog("useUserOrganizations - Processing membership for org:", membershipData.organizationId);
 
           try {
             const orgDoc = await getDoc(

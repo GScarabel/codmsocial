@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Modal,
   ModalContent,
@@ -19,6 +20,7 @@ import {
   HiOutlineUserGroup,
   HiOutlinePencil,
   HiOutlineTrash,
+  HiOutlineUser,
 } from "react-icons/hi";
 
 import { OrganizationRole, Membership, User } from "../types";
@@ -175,17 +177,10 @@ const RoleChangeModal: React.FC<RoleChangeModalProps> = ({
               </div>
 
               <Select
-                className="[&_span[data-focus-scope-end='true']]:!inline"
                 label="Novo Cargo"
                 placeholder="Selecione o novo cargo"
                 selectedKeys={
                   selectedRole ? new Set([selectedRole]) : new Set()
-                }
-                style={
-                  {
-                    // Fix for focus scope accessibility warning
-                    "--focus-scope-end-display": "inline",
-                  } as React.CSSProperties
                 }
                 onSelectionChange={(keys) => {
                   const keysArray = Array.from(keys);
@@ -193,6 +188,11 @@ const RoleChangeModal: React.FC<RoleChangeModalProps> = ({
 
                   setSelectedRole(selected || "");
                 }}
+                style={{
+                  // Fix for focus scope accessibility warning
+                  '--focus-scope-end-display': 'inline'
+                } as React.CSSProperties}
+                className="[&_span[data-focus-scope-end='true']]:!inline"
               >
                 {availableRoles.map((role) => (
                   <SelectItem key={role} textValue={getRoleName(role)}>
@@ -239,6 +239,7 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
   onRoleChange,
   onRemoveMember,
 }) => {
+  const router = useRouter();
   const [selectedMember, setSelectedMember] = useState<
     (Membership & { userData: User }) | null
   >(null);
@@ -382,6 +383,15 @@ const RoleManagement: React.FC<RoleManagementProps> = ({
 
                   {!isCurrentUser && (
                     <div className="flex gap-2">
+                      <Button
+                        color="default"
+                        size="sm"
+                        startContent={<HiOutlineUser className="w-4 h-4" />}
+                        variant="light"
+                        onPress={() => router.push(`/perfil/${member.userId}`)}
+                      >
+                        Ver Perfil
+                      </Button>
                       {canChange && (
                         <Button
                           color="primary"

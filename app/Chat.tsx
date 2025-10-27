@@ -27,33 +27,12 @@ import {
 } from "@heroui/table";
 import { Switch } from "@heroui/switch";
 import { Input } from "@heroui/input";
-import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-} from "@heroui/modal";
-import {
-  HiArrowRight,
-  HiOutlineSearch,
-  HiTrash,
-  HiCheck,
-  HiX,
-} from "react-icons/hi";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
+import { HiArrowRight, HiOutlineSearch, HiTrash, HiCheck, HiX } from "react-icons/hi";
 import { useRouter } from "next/navigation";
-import {
-  addDoc,
-  collection,
-  serverTimestamp,
-  doc,
-  setDoc,
-} from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, doc, setDoc } from "firebase/firestore";
+import { readConversationNotificationPreference, writeConversationNotificationPreference } from "./chatNotificationPreferences";
 
-import {
-  readConversationNotificationPreference,
-  writeConversationNotificationPreference,
-} from "./chatNotificationPreferences";
 import TypingIndicator from "./components/TypingIndicator";
 import AudioRecorder from "./components/AudioRecorder";
 import AudioPlayer from "./components/AudioPlayer";
@@ -101,19 +80,15 @@ const Chat: React.FC<ChatProps> = ({
     useState<NotificationPermission>(() =>
       typeof window !== "undefined" && "Notification" in window
         ? Notification.permission
-        : "default",
+        : "default"
     );
   const currentConversationId = showChatWith?.id ?? null;
   const hasNotificationSupport =
     typeof window !== "undefined" && "Notification" in window;
   const previousMessagesRef = useRef<ChatMessage[]>(chatMessages);
-  const previousConversationIdRef = useRef<string | null>(
-    currentConversationId,
-  );
-  const [
-    isConversationNotificationsEnabled,
-    setIsConversationNotificationsEnabled,
-  ] = useState(true);
+  const previousConversationIdRef = useRef<string | null>(currentConversationId);
+  const [isConversationNotificationsEnabled, setIsConversationNotificationsEnabled] =
+    useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [conversaToDelete, setConversaToDelete] = useState<string | null>(null);
 
@@ -145,28 +120,25 @@ const Chat: React.FC<ChatProps> = ({
     try {
       // Converter o áudio para base64 string
       const reader = new FileReader();
-
       reader.readAsDataURL(audioBlob);
-
+      
       reader.onloadend = async () => {
         const audioDataString = reader.result as string;
 
         // Salvar mensagem do áudio como string
-        const chatId = [userId, showChatWith.otherUserId].sort().join("_");
-
+        const chatId = [userId, showChatWith.otherUserId].sort().join('_');
         await addDoc(collection(db, `Chats/${chatId}/Messages`), {
           senderId: userId,
           senderName: userName,
-          senderAvatar: userAvatar || "",
-          text: "",
+          senderAvatar: userAvatar || '',
+          text: '',
           audioData: audioDataString, // Salvando o áudio como data string
           audioDuration: duration,
-          messageType: "audio",
+          messageType: 'audio',
           createdAt: serverTimestamp(),
         });
 
         const chatDocRef = doc(db, "Chats", chatId);
-
         await setDoc(
           chatDocRef,
           {
@@ -183,13 +155,13 @@ const Chat: React.FC<ChatProps> = ({
             unreadBy: [showChatWith.otherUserId],
             updatedAt: serverTimestamp(),
           },
-          { merge: true },
+          { merge: true }
         );
 
         setHasRecordedAudio(false);
       };
     } catch (error) {
-      console.error("Erro ao enviar áudio:", error);
+      console.error('Erro ao enviar áudio:', error);
     }
   };
 
@@ -201,10 +173,10 @@ const Chat: React.FC<ChatProps> = ({
 
   const handleSendAudio = async (audioBlob: Blob, duration: number) => {
     if (!showChatWith || !audioBlob) return;
-
+    
     // Limpar dados temporários
     (window as any).tempAudioData = null;
-
+    
     await sendAudioMessage(audioBlob, duration);
     setHasRecordedAudio(false);
   };
@@ -214,17 +186,15 @@ const Chat: React.FC<ChatProps> = ({
     if (!("serviceWorker" in navigator)) return;
 
     try {
-      const existingRegistration =
-        await navigator.serviceWorker.getRegistration("/notification-sw.js");
+      const existingRegistration = await navigator.serviceWorker.getRegistration(
+        "/notification-sw.js"
+      );
 
       if (!existingRegistration) {
         await navigator.serviceWorker.register("/notification-sw.js");
       }
     } catch (error) {
-      console.error(
-        "Erro ao registrar o service worker de notificações",
-        error,
-      );
+      console.error("Erro ao registrar o service worker de notificações", error);
     }
   }, []);
 
@@ -234,7 +204,6 @@ const Chat: React.FC<ChatProps> = ({
     if (Notification.permission === "default") {
       try {
         const permission = await Notification.requestPermission();
-
         setNotificationPermission(permission);
       } catch (error) {
         console.error("Erro ao solicitar permissão de notificações", error);
@@ -255,7 +224,7 @@ const Chat: React.FC<ChatProps> = ({
 
       // Gerar ID único para a notificação baseado na mensagem
       const notificationId = `chat-${message.id || message.createdAt?.seconds || Date.now()}`;
-
+      
       const title = `Nova mensagem de ${message.senderName}`;
       const options: NotificationOptions = {
         body: message.text,
@@ -273,16 +242,11 @@ const Chat: React.FC<ChatProps> = ({
       if ("serviceWorker" in navigator) {
         try {
           const registration = await navigator.serviceWorker.ready;
-
           // Usar tag para evitar duplicatas
           await registration.showNotification(title, options);
-
           return;
         } catch (error) {
-          console.error(
-            "Erro ao exibir notificação pelo service worker",
-            error,
-          );
+          console.error("Erro ao exibir notificação pelo service worker", error);
         }
       }
 
@@ -298,7 +262,7 @@ const Chat: React.FC<ChatProps> = ({
       notificationPermission,
       showChatWith?.otherUserId,
       userId,
-    ],
+    ]
   );
 
   useEffect(() => {
@@ -313,15 +277,13 @@ const Chat: React.FC<ChatProps> = ({
   useEffect(() => {
     if (typeof window === "undefined") {
       setIsConversationNotificationsEnabled(true);
-
       return;
     }
 
     const preference = readConversationNotificationPreference(
       currentConversationId,
-      window.localStorage,
+      window.localStorage
     );
-
     setIsConversationNotificationsEnabled(preference);
   }, [currentConversationId]);
 
@@ -333,7 +295,7 @@ const Chat: React.FC<ChatProps> = ({
         writeConversationNotificationPreference(
           currentConversationId,
           enabled,
-          window.localStorage,
+          window.localStorage
         );
       }
 
@@ -345,33 +307,27 @@ const Chat: React.FC<ChatProps> = ({
       currentConversationId,
       notificationPermission,
       requestNotificationPermission,
-    ],
+    ]
   );
 
   useEffect(() => {
     const previousConversationId = previousConversationIdRef.current;
     const isSameConversation = previousConversationId === currentConversationId;
-    const previousMessages = isSameConversation
-      ? (previousMessagesRef.current ?? [])
-      : [];
+    const previousMessages = isSameConversation ? previousMessagesRef.current ?? [] : [];
 
     // Só processar se realmente há mensagens novas
-    if (
-      chatMessages.length > 0 &&
-      chatMessages.length > previousMessages.length
-    ) {
+    if (chatMessages.length > 0 && chatMessages.length > previousMessages.length) {
       const newMessages = chatMessages.slice(previousMessages.length);
-
+      
       // Filtrar apenas mensagens que realmente são novas e não são do usuário atual
-      const validNewMessages = newMessages.filter((message) => {
+      const validNewMessages = newMessages.filter(message => {
         // Verificar se a mensagem não é do usuário atual
         const isNotFromCurrentUser = message.senderId !== userId;
-
+        
         const hasValidId = message.id || message.createdAt;
-
-        const isNotEmptyMessage =
-          message.text || message.messageType === "audio";
-
+        
+        const isNotEmptyMessage = message.text || message.messageType === 'audio';
+        
         return isNotFromCurrentUser && hasValidId && isNotEmptyMessage;
       });
 
@@ -382,10 +338,7 @@ const Chat: React.FC<ChatProps> = ({
     }
 
     // Atualizar referências apenas se houve mudanças reais
-    if (
-      JSON.stringify(previousMessagesRef.current) !==
-      JSON.stringify(chatMessages)
-    ) {
+    if (JSON.stringify(previousMessagesRef.current) !== JSON.stringify(chatMessages)) {
       previousMessagesRef.current = chatMessages;
     }
     previousConversationIdRef.current = currentConversationId;
@@ -395,9 +348,8 @@ const Chat: React.FC<ChatProps> = ({
     if (!searchTerm) {
       return conversas;
     }
-
     return conversas.filter((conversa) =>
-      conversa.otherUserName.toLowerCase().includes(searchTerm.toLowerCase()),
+      conversa.otherUserName.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [conversas, searchTerm]);
 
@@ -408,67 +360,64 @@ const Chat: React.FC<ChatProps> = ({
     { name: "Ações", uid: "actions" },
   ];
 
-  const renderCell = useCallback(
-    (c: ChatOverview, columnKey: string) => {
-      switch (columnKey) {
-        case "user":
-          return (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Avatar
-                alt={c.otherUserName}
-                aria-label={`Avatar de ${c.otherUserName}`}
-                className="cursor-pointer"
-                src={c.otherUserAvatar}
-                onClick={() => router.push(`/perfil/${c.otherUserId}`)}
-              />
-              <span>{c.otherUserName}</span>
-            </div>
-          );
-        case "lastMessage":
-          return (
-            <div
-              style={{
-                maxWidth: "200px",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {c.lastMessage || "—"}
-            </div>
-          );
-        case "unread":
-          return c.unread ? (
-            <span
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: "50%",
-                background: "red",
-                display: "inline-block",
-              }}
+  const renderCell = useCallback((c: ChatOverview, columnKey: string) => {
+    switch (columnKey) {
+      case "user":
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Avatar
+              alt={c.otherUserName}
+              aria-label={`Avatar de ${c.otherUserName}`}
+              src={c.otherUserAvatar}
+              className="cursor-pointer"
+              onClick={() => router.push(`/perfil/${c.otherUserId}`)}
             />
-          ) : null;
-        case "actions":
-          return (
-            <Button
-              isIconOnly
-              aria-label="Excluir conversa"
-              color="danger"
-              size="sm"
-              style={{ minWidth: "auto" }}
-              variant="light"
-              onPress={() => handleDeleteClick(c.id)}
-            >
-              <HiTrash className="w-4 h-4" />
-            </Button>
-          );
-        default:
-          return null;
-      }
-    },
-    [router, handleDeleteClick],
-  );
+            <span>{c.otherUserName}</span>
+          </div>
+        );
+      case "lastMessage":
+        return (
+          <div
+            style={{
+              maxWidth: "200px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {c.lastMessage || "—"}
+          </div>
+        );
+      case "unread":
+        return c.unread ? (
+          <span
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: "50%",
+              background: "red",
+              display: "inline-block",
+            }}
+          />
+        ) : null;
+      case "actions":
+        return (
+          <Button
+            isIconOnly
+            size="sm"
+            variant="light"
+            color="danger"
+            aria-label="Excluir conversa"
+            onPress={() => handleDeleteClick(c.id)}
+            style={{ minWidth: "auto" }}
+          >
+            <HiTrash className="w-4 h-4" />
+          </Button>
+        );
+      default:
+        return null;
+    }
+  }, [router, handleDeleteClick]);
 
   return (
     <>
@@ -486,7 +435,7 @@ const Chat: React.FC<ChatProps> = ({
             value={searchTerm}
             onValueChange={setSearchTerm}
           />
-          <Table aria-label="Lista de conversas" className="mt-2">
+          <Table className="mt-2" aria-label="Lista de conversas">
             <TableHeader columns={columns}>
               {(column) => (
                 <TableColumn key={column.uid}>{column.name}</TableColumn>
@@ -529,22 +478,19 @@ const Chat: React.FC<ChatProps> = ({
               <Avatar
                 alt={showChatWith?.otherUserName}
                 aria-label={`Avatar de ${showChatWith?.otherUserName}`}
-                className="cursor-pointer"
                 src={showChatWith?.otherUserAvatar}
-                onClick={() =>
-                  showChatWith &&
-                  router.push(`/perfil/${showChatWith.otherUserId}`)
-                }
+                className="cursor-pointer"
+                onClick={() => showChatWith && router.push(`/perfil/${showChatWith.otherUserId}`)}
               />
               <span>{showChatWith?.otherUserName}</span>
             </div>
             {hasNotificationSupport && (
               <Switch
-                aria-label="Alternar notificações desta conversa"
-                isDisabled={!hasNotificationSupport}
-                isSelected={isConversationNotificationsEnabled}
                 size="sm"
+                isSelected={isConversationNotificationsEnabled}
+                isDisabled={!hasNotificationSupport}
                 onValueChange={handleToggleConversationNotifications}
+                aria-label="Alternar notificações desta conversa"
               >
                 Notificações
               </Switch>
@@ -576,21 +522,15 @@ const Chat: React.FC<ChatProps> = ({
                 >
                   <div
                     style={{
-                      padding: m.messageType === "audio" ? 0 : 8,
+                      padding: m.messageType === 'audio' ? 0 : 8,
                       borderRadius: 8,
                       maxWidth: "70%",
-                      background:
-                        m.messageType === "audio"
-                          ? "transparent"
-                          : isSender
-                            ? "#006affff"
-                            : "#ffffffff",
+                      background: m.messageType === 'audio' ? "transparent" : (isSender ? "#006affff" : "#ffffffff"),
                       color: isSender ? "white" : "black",
                     }}
                   >
                     {/* Renderizar áudio ou texto */}
-                    {m.messageType === "audio" &&
-                    (m.audioUrl || m.audioData) ? (
+                    {m.messageType === 'audio' && (m.audioUrl || m.audioData) ? (
                       <AudioPlayer
                         audioUrl={(m.audioUrl || m.audioData)!}
                         duration={m.audioDuration}
@@ -598,15 +538,11 @@ const Chat: React.FC<ChatProps> = ({
                     ) : (
                       <div>{m.text}</div>
                     )}
-
+                    
                     {/* Timestamp apenas para mensagens de texto */}
-                    {m.messageType !== "audio" && (
+                    {m.messageType !== 'audio' && (
                       <div
-                        style={{
-                          fontSize: 10,
-                          textAlign: "right",
-                          marginTop: 4,
-                        }}
+                        style={{ fontSize: 10, textAlign: "right", marginTop: 4 }}
                       >
                         {m.createdAt?.toDate
                           ? new Date(m.createdAt.toDate()).toLocaleTimeString()
@@ -647,13 +583,12 @@ const Chat: React.FC<ChatProps> = ({
             )}
           </DrawerBody>
 
-          <DrawerFooter
-            style={{ display: "flex", gap: 8, alignItems: "flex-end" }}
-          >
+          <DrawerFooter style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
             {/* AudioRecorder que substitui o input quando ativo */}
-            {isRecording || hasRecordedAudio ? (
+            {(isRecording || hasRecordedAudio) ? (
               <AudioRecorder
                 onAudioRecorded={handleAudioRecorded}
+                onSendAudio={handleSendAudio}
                 onRecordingStateChange={(recording) => {
                   setIsRecording(recording);
                   if (!recording) {
@@ -665,22 +600,21 @@ const Chat: React.FC<ChatProps> = ({
                     }, 100);
                   }
                 }}
-                onSendAudio={handleSendAudio}
               />
             ) : (
               <>
                 {/* AudioRecorder compacto no lado esquerdo */}
                 <AudioRecorder
                   onAudioRecorded={handleAudioRecorded}
+                  onSendAudio={handleSendAudio}
                   onRecordingStateChange={(recording) => {
                     setIsRecording(recording);
                     if (recording) {
                       setHasRecordedAudio(false);
                     }
                   }}
-                  onSendAudio={handleSendAudio}
                 />
-
+                
                 {/* Input de texto no centro */}
                 <input
                   aria-label="Campo para digitar mensagem"
@@ -697,13 +631,13 @@ const Chat: React.FC<ChatProps> = ({
                     }
                   }}
                 />
-
+                
                 {/* Botão de enviar no lado direito */}
                 <Button
                   aria-label="Enviar mensagem"
                   color="primary"
-                  isDisabled={!chatText.trim()}
                   onPress={sendMessage}
+                  isDisabled={!chatText.trim()}
                 >
                   <HiArrowRight className="w-3 h-3" />
                 </Button>
@@ -716,8 +650,8 @@ const Chat: React.FC<ChatProps> = ({
       {/* Modal de Confirmação de Exclusão */}
       <Modal
         isOpen={showDeleteModal}
-        placement="center"
         onOpenChange={setShowDeleteModal}
+        placement="center"
       >
         <ModalContent className="max-w-sm">
           {(onClose) => (
@@ -727,25 +661,24 @@ const Chat: React.FC<ChatProps> = ({
               </ModalHeader>
               <ModalBody className="py-3">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Tem certeza que deseja excluir esta conversa? Esta ação não
-                  pode ser desfeita.
+                  Tem certeza que deseja excluir esta conversa? Esta ação não pode ser desfeita.
                 </p>
               </ModalBody>
               <ModalFooter className="pt-2">
                 <Button
                   color="default"
-                  size="sm"
-                  startContent={<HiX className="w-3 h-3" />}
                   variant="light"
+                  size="sm"
                   onPress={handleCancelDelete}
+                  startContent={<HiX className="w-3 h-3" />}
                 >
                   Cancelar
                 </Button>
                 <Button
                   color="danger"
                   size="sm"
-                  startContent={<HiCheck className="w-3 h-3" />}
                   onPress={handleConfirmDelete}
+                  startContent={<HiCheck className="w-3 h-3" />}
                 >
                   Confirmar
                 </Button>

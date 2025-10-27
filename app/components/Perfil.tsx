@@ -53,6 +53,9 @@ import { usePresence } from "../hooks/usePresence";
 import { auth, db } from "../firebase";
 
 import StatusIndicator from "./StatusIndicator";
+import { useManualPresence } from "../hooks/useManualPresence";
+import { useUserPresence } from "../hooks/useUserPresence";
+
 
 interface PerfilUser {
   uid: string;
@@ -111,6 +114,8 @@ const Perfil: React.FC<PerfilProps> = ({ userId }) => {
   const [privacyLastSeen, setPrivacyLastSeen] = useState<
     "everyone" | "contacts" | "nobody" | "mutual"
   >("everyone");
+  const { manualStatus, updateManualStatus } = useManualPresence();
+  const { presence: userPresence, loading: presenceLoading, error: presenceError } = useUserPresence(userId || "");
 
   // Inicializa o sistema de presença para o usuário atual
   usePresence();
@@ -667,21 +672,36 @@ const Perfil: React.FC<PerfilProps> = ({ userId }) => {
         <Card className="space-y-6 mr-5 ml-5">
           <CardHeader className="flex flex-col items-center gap-3">
             {/* Avatares */}
-            <div className="flex items-center gap-2">
-              <img
-                alt="Avatar"
-                className="h-20 w-20 rounded-full object-cover border-2 border-white/30 bg-gray-700 z-10"
-                src={profileUser.photoURL || "/default-avatar.png"}
-              />
-              {organization?.logoURL && (
-                <img
-                  alt={organization.name}
-                  className="-ml-10 h-20 w-20 rounded-full object-cover border-2 border-white/30 bg-gray-700 z-0"
-                  src={organization.logoURL}
-                />
-              )}
-            </div>
+<div className="relative flex items-center">
+  {/* Logo da organização - fica atrás */}
+  {organization?.logoURL && (
+    <img
+      alt={organization.name}
+      src={organization.logoURL}
+      className="absolute h-20 w-20 rounded-full object-cover border-2 border-white/30 bg-gray-700 z-0 ml-12"
+    />
+  )}
+{/* Avatar principal */}
+<div className="relative z-10">
+  <img
+    alt="Avatar"
+    className="h-20 w-20 rounded-full object-cover border-2 border-white/30 bg-gray-700"
+    src={profileUser.photoURL || "/default-avatar.png"}
+  />
 
+  {/* Bolinha de status sobreposta */}
+  <div className="absolute bottom-1 right-1 z-20">
+    <StatusIndicator
+      size="md"
+      status={
+        manualStatus === "auto"
+          ? "offline" // ou "online", dependendo do comportamento desejado
+          : (manualStatus as "online" | "away" | "offline")
+      }
+    />
+  </div>
+</div>
+</div>
             {/* Nome, organização e cargo */}
             {isOwnProfile ? (
               editMode ? (
@@ -723,6 +743,38 @@ const Perfil: React.FC<PerfilProps> = ({ userId }) => {
                         Ninguém pode ver meu status
                       </SelectItem>
                     </Select>
+
+
+ {isOwnProfile && (
+              <div className="flex items-center gap-2">
+                <Select
+                  selectedKeys={[manualStatus]}
+                  onSelectionChange={(keys) => {
+                    const selectedKey = Array.from(keys)[0] as string;
+                    updateManualStatus(selectedKey as "online" | "away" | "offline" | "auto");
+                  }}
+                            className="w-full"
+                      label="Status"
+                  size="sm"
+                  variant="bordered"
+                  aria-label="Selecionar status de presença"
+                >
+                  <SelectItem key="auto" className="text-gray-200 data-[hover=true]:bg-gray-700 text-xs">
+                    Automático
+                  </SelectItem>
+                  <SelectItem key="online" className="text-gray-200 data-[hover=true]:bg-gray-700 text-xs">
+                    Online
+                  </SelectItem>
+                  <SelectItem key="away" className="text-gray-200 data-[hover=true]:bg-gray-700 text-xs">
+                    Ausente
+                  </SelectItem>
+                  <SelectItem key="offline" className="text-gray-200 data-[hover=true]:bg-gray-700 text-xs">
+                    Offline
+                  </SelectItem>
+                </Select>
+              </div>
+            )}
+
                   </div>
                 </div>
               ) : (
@@ -862,34 +914,18 @@ const Perfil: React.FC<PerfilProps> = ({ userId }) => {
               </span>
             </div>
 
-            {user?.lastSeen && user?.privacy?.lastSeen !== "nobody" && (
-              <div className="flex items-center gap-3">
-                <HiOutlineCalendar className="w-5 h-5 text-gray-500" />
-                <span className="-ml-1">
-                  Visto por último:{" "}
-                  {user?.lastSeen?.toDate
-                    ? user?.lastSeen.toDate().toLocaleString("pt-BR")
-                    : "Data não disponível"}
-                </span>
-              </div>
-            )}
+{user?.lastSeen && user?.privacy?.lastSeen !== "nobody" && (
+  <div className="flex items-center gap-3">
+    <HiOutlineCalendar className="w-5 h-5 text-gray-500" />
+    <span className="-ml-1">
+      Visto por último:{" "}
+      {userPresence?.lastSeen
+        ? userPresence.lastSeen.toLocaleString("pt-BR")
+        : "Data não disponível"}
+    </span>
+  </div>
+)}
 
-            {/* Status e visto por último */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <StatusIndicator
-                  size="sm"
-                  status={user?.presence || "offline"}
-                />
-                <span className="text-lg font-medium">
-                  {user?.presence === "online"
-                    ? "Online"
-                    : user?.presence === "away"
-                      ? "Ausente"
-                      : "Offline"}
-                </span>
-              </div>
-            </div>
 
             <div className="flex justify-center pt-4">
               <Button

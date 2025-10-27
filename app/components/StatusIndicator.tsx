@@ -8,10 +8,10 @@ interface StatusIndicatorProps {
   className?: string;
 }
 
-const StatusIndicator: React.FC<StatusIndicatorProps> = ({
-  status,
-  size = "md",
-  className = "",
+const StatusIndicator: React.FC<StatusIndicatorProps> = ({ 
+  status, 
+  size = "md", 
+  className = "" 
 }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -40,7 +40,7 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
   };
 
   return (
-    <div
+    <div 
       className={`
         ${getSizeClasses(size)} 
         ${getStatusColor(status)} 

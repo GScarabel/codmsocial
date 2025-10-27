@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Chip } from "@heroui/chip";
 import { Avatar } from "@heroui/avatar";
@@ -25,6 +26,7 @@ import {
   HiOutlineGlobeAlt,
   HiOutlineDesktopComputer,
   HiOutlineUserGroup,
+  HiOutlineLink,
   HiOutlineSwitchHorizontal,
 } from "react-icons/hi";
 import { User } from "firebase/auth";
@@ -77,6 +79,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
   selectedOrgId,
   onSelectOrganization,
 }) => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
   const { getRoleName, getRoleEmoji, getRolePermissions } = useRoleManagement();
 
@@ -86,16 +89,10 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
       setActiveTab(event.detail as string);
     };
 
-    window.addEventListener(
-      "changeSubTab",
-      handleSubTabChange as EventListener,
-    );
+    window.addEventListener("changeSubTab", handleSubTabChange as EventListener);
 
     return () =>
-      window.removeEventListener(
-        "changeSubTab",
-        handleSubTabChange as EventListener,
-      );
+      window.removeEventListener("changeSubTab", handleSubTabChange as EventListener);
   }, []);
 
   // Estados para configurações da organização
@@ -127,6 +124,24 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
   const { pendingMemberships, loading: pendingLoading } = usePendingMemberships(
     userOrg?.id || "",
   );
+
+  // Atualizar orgSettings quando userOrg mudar
+  useEffect(() => {
+    if (userOrg) {
+      setOrgSettings({
+        name: userOrg.name || "",
+        tag: userOrg.tag || "",
+        description: userOrg.description || "",
+        logoURL: userOrg.logoURL || "",
+        visibility: userOrg.visibility || "public",
+        game: userOrg.game || "CODM",
+        maxMembers: userOrg.maxMembers || 50,
+        region: userOrg.region || "BR",
+        slug: userOrg.slug || "",
+        ownerId: userOrg.ownerId || "",
+      });
+    }
+  }, [userOrg]);
 
   if (!user) {
     return (
@@ -206,14 +221,16 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
     try {
       // Adicionar limite para otimizar a consulta
       const q = query(
-        collection(db, "organizations"),
+        collection(db, "organizations"), 
         where("tag", "==", tag),
-        limit(1),
+        limit(1)
       );
       const querySnapshot = await getDocs(q);
 
       return querySnapshot.empty;
-    } catch {
+    } catch (error) {
+      console.error("Erro ao validar tag:", error);
+
       return false;
     }
   };
@@ -248,11 +265,10 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
 
     if (!tagRegex.test(orgSettings.tag)) {
       addToast({
-        title: "Erro de Validação",
-        description:
-          "Tag deve conter apenas letras, números, underscore e caracteres Unicode",
-        color: "danger",
-      });
+          title: "Erro de Validação",
+          description: "Tag deve conter apenas letras, números, underscore e caracteres Unicode",
+          color: "danger",
+        });
 
       return;
     }
@@ -281,21 +297,21 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
       }
 
       // Atualizar organização no Firestore
-      const orgRef = doc(db, "organizations", userOrg.id);
+       const orgRef = doc(db, "organizations", userOrg.id);
 
-      await updateDoc(orgRef, {
-        name: orgSettings.name.trim(),
-        tag: orgSettings.tag.trim(),
-        description: orgSettings.description.trim(),
-        logoURL: orgSettings.logoURL.trim() || null,
-        visibility: orgSettings.visibility,
-        game: orgSettings.game,
-        maxMembers: orgSettings.maxMembers,
-        region: orgSettings.region,
-        slug: orgSettings.slug.trim(),
-        ownerId: orgSettings.ownerId.trim() || userOrg.ownerId,
-        updatedAt: serverTimestamp(),
-      });
+       await updateDoc(orgRef, {
+         name: orgSettings.name.trim(),
+         tag: orgSettings.tag.trim(),
+         description: orgSettings.description.trim(),
+         logoURL: orgSettings.logoURL.trim() || null,
+         visibility: orgSettings.visibility,
+         game: orgSettings.game,
+         maxMembers: orgSettings.maxMembers,
+         region: orgSettings.region,
+         slug: orgSettings.slug.trim(),
+         ownerId: orgSettings.ownerId.trim() || userOrg.ownerId,
+         updatedAt: serverTimestamp(),
+       });
 
       addToast({
         title: "Configurações Salvas",
@@ -305,7 +321,8 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
       });
 
       setTagValidation({ isValid: true, message: "" });
-    } catch {
+    } catch (error) {
+      console.error("Erro ao salvar configurações:", error);
       addToast({
         title: "Erro",
         description: "Erro ao salvar configurações. Tente novamente.",
@@ -348,7 +365,8 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
           color: "danger",
         });
       }
-    } catch {
+    } catch (error) {
+      console.error("Erro no upload do logo:", error);
       addToast({
         title: "Erro no Upload",
         description: "Erro ao enviar imagem. Tente novamente.",
@@ -360,21 +378,34 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
   };
 
   // Função para resetar configurações
-  const handleResetSettings = () => {
-    setOrgSettings({
-      name: userOrg?.name || "",
-      tag: userOrg?.tag || "",
-      description: userOrg?.description || "",
-      logoURL: userOrg?.logoURL || "",
-      visibility: userOrg?.visibility || "public",
-      game: userOrg?.game || "CODM",
-      maxMembers: userOrg?.maxMembers || 50,
-      region: userOrg?.region || "BR",
-      slug: userOrg?.slug || "",
-      ownerId: userOrg?.ownerId || "",
-    });
-    setTagValidation({ isValid: true, message: "" });
-  };
+   const handleResetSettings = () => {
+     setOrgSettings({
+       name: userOrg?.name || "",
+       tag: userOrg?.tag || "",
+       description: userOrg?.description || "",
+       logoURL: userOrg?.logoURL || "",
+       visibility: userOrg?.visibility || "public",
+       game: userOrg?.game || "CODM",
+       maxMembers: userOrg?.maxMembers || 50,
+       region: userOrg?.region || "BR",
+       slug: userOrg?.slug || "",
+       ownerId: userOrg?.ownerId || "",
+     });
+     setTagValidation({ isValid: true, message: "" });
+   };
+
+  // Função helper para logs apenas em desenvolvimento
+  function devLog(...args: any[]) {
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      console.log(...args);
+    }
+  }
+
+  function devError(...args: any[]) {
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      console.error(...args);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -539,6 +570,8 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                           name={member.userData.displayName}
                           size="sm"
                           src={member.userData.photoURL}
+                          className="cursor-pointer hover:scale-105 transition-transform"
+                          onClick={() => router.push(`/perfil/${member.userId}`)}
                         />
                         <div className="flex-1">
                           <div className="font-medium">
@@ -595,11 +628,17 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                   onRemoveMember={async (userId: string, reason?: string) => {
                     if (!user || !userOrg || !userMembership) return;
 
+                    devLog("🔧 Iniciando remoção de membro:", {
+                      userId,
+                      reason,
+                    });
+
                     const targetMember = members?.find(
                       (m) => m.userId === userId,
                     );
 
                     if (!targetMember) {
+                      devError("❌ Membro não encontrado");
                       addToast({
                         title: "Erro",
                         description: "Membro não encontrado",
@@ -615,6 +654,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                     );
 
                     if (!validation.valid) {
+                      devError("❌ Validação falhou:", validation.reason);
                       addToast({
                         title: "Erro de Permissão",
                         description: validation.reason || "Erro de validação",
@@ -672,13 +712,16 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
 
                       await batch.commit();
 
+                      devLog("✅ Membro removido e organizationTag apagado");
+
                       addToast({
                         title: "Membro Removido",
                         description:
                           "Membro foi removido da organização com sucesso",
                         color: "success",
                       });
-                    } catch {
+                    } catch (error) {
+                      devError("❌ Erro ao remover membro:", error);
                       addToast({
                         title: "Erro",
                         description:
@@ -694,12 +737,19 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                   ) => {
                     if (!user || !userOrg || !userMembership) return;
 
+                    devLog("🔧 Iniciando alteração de cargo:", {
+                      userId,
+                      newRole,
+                      reason,
+                    });
+
                     // Encontrar o membro atual para obter seu cargo
                     const targetMember = members?.find(
                       (m) => m.userId === userId,
                     );
 
                     if (!targetMember) {
+                      devError("❌ Membro não encontrado");
                       addToast({
                         title: "Erro",
                         description: "Membro não encontrado",
@@ -717,6 +767,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                     );
 
                     if (!validation.valid) {
+                      devError("❌ Validação falhou:", validation.reason);
                       addToast({
                         title: "Erro de Permissão",
                         description: validation.reason || "Erro de validação",
@@ -767,12 +818,15 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                       });
 
                       await batch.commit();
+
+                      devLog("✅ Cargo alterado com sucesso");
                       addToast({
                         title: "Cargo Alterado",
                         description: `Cargo do membro foi alterado para ${newRole} com sucesso`,
                         color: "success",
                       });
-                    } catch {
+                    } catch (error) {
+                      devError("❌ Erro ao alterar cargo:", error);
                       addToast({
                         title: "Erro",
                         description:
@@ -951,17 +1005,17 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
 
                     {/* Descrição */}
                     <Textarea
-                      classNames={{
-                        input: "resize-none",
-                        inputWrapper: "min-h-[80px]",
-                      }}
                       description="Descrição da organização (máximo 1000 caracteres)"
                       label="Descrição"
                       maxLength={1000}
-                      maxRows={6}
-                      minRows={3}
                       placeholder="Descreva sua organização..."
                       value={orgSettings.description}
+                      minRows={3}
+                      maxRows={6}
+                      classNames={{
+                        input: "resize-none",
+                        inputWrapper: "min-h-[80px]"
+                      }}
                       onChange={(e) =>
                         setOrgSettings((prev) => ({
                           ...prev,
@@ -1021,7 +1075,6 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                       }
                       onSelectionChange={(keys) => {
                         const gameValue = Array.from(keys)[0] as GameType;
-
                         setOrgSettings((prev) => ({
                           ...prev,
                           game: gameValue,
@@ -1068,7 +1121,9 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                       label="Região"
                       placeholder="Selecione a região"
                       selectedKeys={[orgSettings.region]}
-                      startContent={<span className="text-lg">🌍</span>}
+                      startContent={
+                        <span className="text-lg">🌍</span>
+                      }
                       onSelectionChange={(keys) => {
                         const selectedKey = Array.from(keys)[0] as string;
 
@@ -1114,17 +1169,16 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                     <Input
                       description="Número máximo de membros permitidos na organização"
                       label="Máximo de Membros"
-                      max="1000"
-                      min="1"
                       placeholder="Digite o número máximo de membros"
                       startContent={
                         <HiOutlineUserGroup className="w-4 h-4 text-indigo-500" />
                       }
                       type="number"
+                      min="1"
+                      max="1000"
                       value={orgSettings.maxMembers.toString()}
                       onChange={(e) => {
                         const value = parseInt(e.target.value) || 50;
-
                         setOrgSettings((prev) => ({
                           ...prev,
                           maxMembers: Math.max(1, Math.min(1000, value)),
@@ -1135,63 +1189,47 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                     {/* Proprietário da Organização */}
                     <Select
                       description="Selecione um membro para transferir a liderança da organização"
-                      isDisabled={
-                        !members || members.length <= 1 || settingsLoading
-                      }
                       label="Transferir Liderança"
-                      placeholder={
-                        members && members.length > 1
-                          ? "Selecione um membro"
-                          : "Nenhum membro disponível (não é possível transferir)"
-                      }
+                      placeholder={members && members.length > 1 ? "Selecione um membro" : "Nenhum membro disponível (não é possível transferir)"}
                       selectedKeys={
-                        orgSettings.ownerId &&
-                        members?.some(
-                          (member) =>
-                            member.userId === orgSettings.ownerId &&
-                            member.userId !== userOrg?.ownerId &&
-                            member.status === "accepted",
-                        )
-                          ? [orgSettings.ownerId]
+                        orgSettings.ownerId && 
+                        members?.some(member => 
+                          member.userId === orgSettings.ownerId && 
+                          member.userId !== userOrg?.ownerId && 
+                          member.status === 'accepted'
+                        ) 
+                          ? [orgSettings.ownerId] 
                           : []
                       }
                       startContent={
                         <HiOutlineSwitchHorizontal className="w-4 h-4 text-pink-500" />
                       }
+                      isDisabled={!members || members.length <= 1 || settingsLoading}
                       onSelectionChange={(keys) => {
                         const selectedKey = Array.from(keys)[0] as string;
-
                         setOrgSettings((prev) => ({
                           ...prev,
                           ownerId: selectedKey || "",
                         }));
                       }}
                     >
-                      {members &&
-                        members
-                          .filter(
-                            (member) =>
-                              member.userId !== userOrg?.ownerId &&
-                              member.status === "accepted",
-                          )
-                          .map((member) => (
-                            <SelectItem
-                              key={member.userId}
-                              startContent={
-                                <Avatar
-                                  className="w-6 h-6"
-                                  name={
-                                    member.userData?.displayName || "Usuário"
-                                  }
-                                  src={member.userData?.photoURL}
-                                />
-                              }
-                              textValue={`${member.userData?.displayName || "Usuário"} (${getRoleName(member.role)})`}
-                            >
-                              {member.userData?.displayName || "Usuário"} (
-                              {getRoleName(member.role)})
-                            </SelectItem>
-                          ))}
+                      {members && members
+                         .filter(member => member.userId !== userOrg?.ownerId && member.status === 'accepted')
+                         .map((member) => (
+                           <SelectItem
+                             key={member.userId}
+                             textValue={`${member.userData?.displayName || "Usuário"} (${getRoleName(member.role)})`}
+                             startContent={
+                               <Avatar
+                                 className="w-6 h-6"
+                                 name={member.userData?.displayName || "Usuário"}
+                                 src={member.userData?.photoURL}
+                               />
+                             }
+                           >
+                             {member.userData?.displayName || "Usuário"} ({getRoleName(member.role)})
+                           </SelectItem>
+                         ))}
                     </Select>
 
                     {/* Preview do Logo */}

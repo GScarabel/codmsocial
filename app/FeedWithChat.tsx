@@ -44,11 +44,11 @@ import {
   DropdownItem,
 } from "@heroui/dropdown";
 import { Chip } from "@heroui/chip";
-import { useRouter } from "next/navigation";
 
 import { db } from "./firebase";
 import { Post, PostReaction, ChatOverview, ChatMessage } from "./types";
 import Chat from "./Chat";
+import { useRouter } from "next/navigation";
 import { usePresence } from "./hooks/usePresence";
 
 interface FeedProps {
@@ -128,7 +128,7 @@ const FeedWithChat: React.FC<FeedProps> = ({
     { name: "Uau", emoji: "😮" },
     { name: "Triste", emoji: "😢" },
     { name: "Grr", emoji: "😡" },
-    { name: "Fogo", emoji: "🔥" },
+    { name: "Fogo", emoji: "🔥" }
   ];
 
   const [showChatDrawer, setShowChatDrawer] = useState(false);
@@ -161,8 +161,8 @@ const FeedWithChat: React.FC<FeedProps> = ({
   );
 
   // Constantes para o picker
-  const PICKER_W_MOBILE = 260;
-  const PICKER_W_DESKTOP = 360;
+  const PICKER_W_MOBILE = 340; 
+  const PICKER_W_DESKTOP = 460; 
   const PICKER_H = 60; // altura aproximada do picker
   const GAP = 10; // espaço entre botão e picker
   const MARGIN = 16; // margem das bordas
@@ -619,15 +619,15 @@ const FeedWithChat: React.FC<FeedProps> = ({
               <CardHeader className="flex items-center gap-3">
                 {p.authorId !== user.uid ? (
                   <Tooltip content="Visitar perfil" placement="top">
-                    <div className="relative">
-                      <Avatar
-                        alt={p.authorName}
-                        className="h-10 w-10 cursor-pointer"
-                        src={p.authorAvatar || "/default-avatar.png"}
-                        onClick={() => router.push(`/perfil/${p.authorId}`)}
-                      />
-                    </div>
-                  </Tooltip>
+                  <div className="relative">
+                    <Avatar
+                      alt={p.authorName}
+                      className="h-10 w-10 cursor-pointer"
+                      src={p.authorAvatar || "/default-avatar.png"}
+                      onClick={() => router.push(`/perfil/${p.authorId}`)}
+                    />
+                  </div>
+                </Tooltip>
                 ) : (
                   <div className="relative">
                     <Avatar
@@ -642,9 +642,9 @@ const FeedWithChat: React.FC<FeedProps> = ({
                     <div className="flex flex-col">
                       <span className="font-medium flex items-center gap-1">
                         {p.authorTag && (
-                          <span className="text-[14px] mr-0 ml-0 text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)] animate-pulse">
-                            {p.authorTag}
-                          </span>
+<span className="text-[14px] mr-0 ml-0 text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)] animate-pulse">
+  {p.authorTag}
+</span>
                         )}
                         {p.authorName}
                       </span>
@@ -807,43 +807,32 @@ const FeedWithChat: React.FC<FeedProps> = ({
                               className="flex flex-col  pb-2 last:border-none"
                             >
                               <div className="flex items-center gap-2">
-                                {c.authorId !== user.uid ? (
-                                  <Tooltip
-                                    content="Visitar perfil"
-                                    placement="top"
-                                  >
-                                    <div className="relative">
-                                      <Avatar
-                                        className="cursor-pointer"
-                                        size="sm"
-                                        src={
-                                          c.authorAvatar ||
-                                          "/default-avatar.png"
-                                        }
-                                        onClick={() =>
-                                          router.push(`/perfil/${c.authorId}`)
-                                        }
-                                      />
-                                    </div>
-                                  </Tooltip>
-                                ) : (
-                                  <div className="relative">
-                                    <Avatar
-                                      size="sm"
-                                      src={
-                                        c.authorAvatar || "/default-avatar.png"
-                                      }
-                                    />
-                                  </div>
-                                )}
+            {c.authorId !== user.uid ? (
+    <Tooltip content="Visitar perfil" placement="top">
+      <div className="relative">
+        <Avatar
+          size="sm"
+          src={c.authorAvatar || "/default-avatar.png"}
+          className="cursor-pointer"
+          onClick={() => router.push(`/perfil/${c.authorId}`)}
+        />
+      </div>
+    </Tooltip>
+  ) : (
+    <div className="relative">
+      <Avatar
+        size="sm"
+        src={c.authorAvatar || "/default-avatar.png"}
+      />
+    </div>
+  )}
                                 <div className="flex flex-col">
                                   <span className="text-[13px] text-gray-200 -mt-0">
-                                    {c.authorTag &&
-                                      c.authorTag.trim() !== "" && (
-                                        <span className="text-[14px] mr-2 ml-0 text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)] animate-pulse">
-                                          {c.authorTag}
-                                        </span>
-                                      )}
+                                    {c.authorTag && c.authorTag.trim() !== "" && (
+<span className="text-[14px] mr-2 ml-0 text-white drop-shadow-[0_0_3px_rgba(255,255,255,0.8)] animate-pulse">
+   {c.authorTag}
+</span>
+                                    )}
                                     {c.authorName}
                                     <span className="text-[8px] text-gray-500 italic ml-1">
                                       {c.createdAt?.toDate
@@ -965,53 +954,45 @@ const FeedWithChat: React.FC<FeedProps> = ({
             {likesUsers.length === 0 ? (
               <p>Sem reacao ainda.</p>
             ) : (
-              <Listbox
-                aria-label="Lista de usuários que curtiram"
-                classNames={{
-                  base: "w-full max-w-[280px] -mt-3",
-                  list: "max-h-[300px] overflow-y-auto",
-                }}
-              >
-                {likesUsers.map((u) => (
-                  <ListboxItem key={u.uid} textValue={u.name}>
-                    {u.uid !== user.uid ? (
-                      <Tooltip content="Visitar perfil" placement="top">
-                        <div
-                          className="flex items-center gap-2 cursor-pointer hover:bg-gray-700/20 rounded-md p-1 transition-colors"
-                          role="button"
-                          tabIndex={0} // permite foco via teclado
-                          onClick={() => router.push(`/perfil/${u.uid}`)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              router.push(`/perfil/${u.uid}`);
-                            }
-                          }}
-                        >
-                          <Avatar
-                            alt={u.name}
-                            className="h-8 w-8 rounded-full"
-                            src={u.avatar || "/default-avatar.png"}
-                          />
-                          <span className="font-medium">{u.name}</span>
-                          <span className="ml-2 text-lg">
-                            {u.reactionEmoji}
-                          </span>
-                        </div>
-                      </Tooltip>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Avatar
-                          alt={u.name}
-                          className="h-8 w-8 rounded-full"
-                          src={u.avatar || "/default-avatar.png"}
-                        />
-                        <span className="font-medium">{u.name}</span>
-                        <span className="ml-2 text-lg">{u.reactionEmoji}</span>
-                      </div>
-                    )}
-                  </ListboxItem>
-                ))}
-              </Listbox>
+             <Listbox
+  aria-label="Lista de usuários que curtiram"
+  classNames={{
+    base: "w-full max-w-[280px] -mt-3",
+    list: "max-h-[300px] overflow-y-auto",
+  }}
+>
+  {likesUsers.map((u) => (
+   <ListboxItem key={u.uid} textValue={u.name}>
+ {u.uid !== user.uid ? (
+  <Tooltip content="Visitar perfil" placement="top">
+    <button
+      type="button"
+      className="flex items-center gap-2 cursor-pointer hover:bg-gray-700/20 rounded-md p-1 transition-colors"
+      onClick={() => router.push(`/perfil/${u.uid}`)}
+    >
+      <Avatar
+        alt={u.name}
+        className="h-8 w-8 rounded-full"
+        src={u.avatar || "/default-avatar.png"}
+      />
+      <span className="font-medium">{u.name}</span>
+      <span className="ml-2 text-lg">{u.reactionEmoji}</span>
+    </button>
+  </Tooltip>
+) : (
+  <div className="flex items-center gap-2">
+    <Avatar
+      alt={u.name}
+      className="h-8 w-8 rounded-full"
+      src={u.avatar || "/default-avatar.png"}
+    />
+    <span className="font-medium">{u.name}</span>
+    <span className="ml-2 text-lg">{u.reactionEmoji}</span>
+  </div>
+)}
+    </ListboxItem>
+      ))}
+    </Listbox>
             )}
           </ModalBody>
           <ModalFooter>
@@ -1045,15 +1026,15 @@ const FeedWithChat: React.FC<FeedProps> = ({
         createPortal(
           <div
             data-reaction-picker
-            className="fixed rounded-full px-3 py-2 shadow-2xl border border-gray-600/50 flex z-[9999] backdrop-blur-sm animate-in fade-in-0 zoom-in-0 slide-in-from-bottom-2 duration-300 max-w-[90vw]"
+            className="fixed rounded-full px-4 py-3 shadow-2xl border border-gray-600/50 flex gap-1 z-[9999] backdrop-blur-sm animate-in fade-in-0 zoom-in-0 slide-in-from-bottom-2 duration-300 max-w-[95vw]"
             style={{
               top: pickerPosition.top,
               left: pickerPosition.left,
               width: pickerPosition.width,
               transform: "translateX(-50%)",
               // opcional: respeitar safe area no iOS
-              paddingLeft: "max(12px, env(safe-area-inset-left))",
-              paddingRight: "max(12px, env(safe-area-inset-right))",
+              paddingLeft: "max(16px, env(safe-area-inset-left))",
+              paddingRight: "max(16px, env(safe-area-inset-right))",
             }}
             // no touch não use hover timeouts
             onMouseEnter={() => {
@@ -1076,9 +1057,14 @@ const FeedWithChat: React.FC<FeedProps> = ({
             {feedReactions.map((reaction, index) => (
               <button
                 key={index}
-                className="text-2xl md:text-3xl hover:scale-150 transition-all duration-200 p-1 md:p-2 rounded-full hover:bg-gray-700/50 transform hover:-translate-y-1 cursor-pointer"
+                className="text-2xl md:text-3xl hover:scale-125 transition-all duration-200 p-1.5 md:p-2 rounded-full hover:bg-gray-700/50 transform hover:-translate-y-1 cursor-pointer flex-shrink-0"
                 style={{
                   filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.3))",
+                  minWidth: "40px",
+                  minHeight: "40px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
                 title={reaction.name}
                 onClick={(e) => {
