@@ -652,7 +652,12 @@ const handleSave = async () => {
   label="Privacidade do status"
   variant="bordered"
   selectedKeys={[privacyLastSeen]}
-  onSelectionChange={(keys) => setPrivacyLastSeen(Array.from(keys)[0] as string)}
+ onSelectionChange={(keys) => {
+  const value = Array.from(keys)[0];
+  if (value === "everyone" || value === "contacts" || value === "mutual" || value === "nobody") {
+    setPrivacyLastSeen(value);
+  }
+}}
   className="w-full"
 >
   <SelectItem key="everyone">Todos podem ver quando estou online</SelectItem>

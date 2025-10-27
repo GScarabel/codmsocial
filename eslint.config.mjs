@@ -87,15 +87,15 @@ export default defineConfig([globalIgnores([
 
     rules: {
         "no-console": "warn",
-        "react/prop-types": "off",
-        "react/jsx-uses-react": "off",
-        "react/react-in-jsx-scope": "off",
-        "react-hooks/exhaustive-deps": "off",
+        "react/prop-types": "warn",
+        "react/jsx-uses-react": "warn",
+        "react/react-in-jsx-scope": "warn",
+        "react-hooks/exhaustive-deps": "warn",
         "jsx-a11y/click-events-have-key-events": "warn",
         "jsx-a11y/interactive-supports-focus": "warn",
         "prettier/prettier": "warn",
-        "no-unused-vars": "off",
-        "unused-imports/no-unused-vars": "off",
+        "no-unused-vars": "warn",
+        "unused-imports/no-unused-vars": "warn",
         "unused-imports/no-unused-imports": "warn",
 
         "@typescript-eslint/no-unused-vars": ["warn", {
