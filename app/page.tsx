@@ -33,6 +33,8 @@ import {
   getDocs,
   arrayUnion,
   arrayRemove,
+  deleteDoc,
+  writeBatch,
 } from "firebase/firestore";
 import {
   signInWithPopup,
@@ -84,6 +86,7 @@ import MercadoOrganizacao from "./components/MercadoOrganizacao";
 import RankingSystem from "./components/RankingSystem";
 import Perfil from "./components/Perfil"; // importa o componente
 import SplashScreen from "./components/SplashScreen";
+import { usePresence } from "./hooks/usePresence";
 
 const navigation = [
   { label: "Feed", icon: <HiOutlineNewspaper className="w-5 h-5" /> },
@@ -118,6 +121,9 @@ const navigation = [
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  // Inicializa o sistema de presença
+  usePresence();
   const [activeTab, setActiveTab] = useState<
     | "Feed"
     | "Conversas"
@@ -196,7 +202,7 @@ export default function Home() {
   const { userOrganizations, loading: userOrgsLoading } = useUserOrganizations(
     user?.uid || null,
   );
-  const { userOrganizations: publicOrganizations, loading: publicOrgsLoading } =
+  const { organizations: publicOrganizations, loading: publicOrgsLoading } =
     useOrganizations();
   const { getRoleName, getRoleEmoji } = useRoleManagement();
 
@@ -204,6 +210,19 @@ export default function Home() {
   const [selectedOrgId, setSelectedOrgId] = useState<string | undefined>(
     undefined,
   );
+
+  // Função helper para logs apenas em desenvolvimento
+  function devLog(...args: any[]) {
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      console.log(...args);
+    }
+  }
+
+  function devError(...args: any[]) {
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      console.error(...args);
+    }
+  }
 
   // Pegar a organização selecionada ou a primeira disponível
   const userOrg = selectedOrgId
@@ -221,13 +240,26 @@ export default function Home() {
   }, [userOrganizations, selectedOrgId]);
 
   useEffect(() => {
-    console.log("Setting up auth listener...");
     const unsub = onAuthStateChanged(auth, async (u) => {
-      //console.log('Auth state changed:', u ? `User logged in: ${u.uid}` : 'User logged out');
       setUser(u);
       if (u) {
         const userDocRef = doc(db, "Users", u.uid);
         const userDocSnap = await getDoc(userDocRef);
+
+        if (!userDocSnap.exists()) {
+          await setDoc(userDocRef, {
+            uid: u.uid,
+            displayName: u.displayName || u.email?.split("@")[0] || "Usuário",
+            email: u.email,
+            photoURL: u.photoURL || "",
+            createdAt: serverTimestamp(),
+            lastSeen: serverTimestamp(),
+          });
+        } else {
+          await updateDoc(userDocRef, {
+            lastSeen: serverTimestamp(),
+          });
+        }
 
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
@@ -262,22 +294,34 @@ export default function Home() {
 
   // Conversas
   useEffect(() => {
-    if (!user) return;
+    if (!user?.uid) {
+      return;
+    }
 
-    const unsub = onSnapshot(collection(db, "Chats"), (snap) => {
+    // Restringe a consulta aos chats onde o usuário é participante
+    const qChats = query(
+      collection(db, "Chats"),
+      where("participants", "array-contains", user.uid)
+    );
+
+    const unsub = onSnapshot(qChats, (snap) => {
       const list: ChatOverview[] = [];
       const seenIds = new Set<string>(); // Prevenir duplicatas
 
       snap.forEach((docSnap) => {
         const data = docSnap.data() as any;
 
-        if (!data.participants?.includes(user.uid)) return;
+        if (!data.participants?.includes(user.uid)) {
+          return;
+        }
 
         const otherUid = data.participants.find(
           (uid: string) => uid !== user.uid,
         );
 
-        if (!otherUid || seenIds.has(docSnap.id)) return; // Evitar duplicatas
+        if (!otherUid || seenIds.has(docSnap.id)) {
+          return; // Evitar duplicatas
+        }
 
         seenIds.add(docSnap.id);
 
@@ -285,43 +329,44 @@ export default function Home() {
         const otherAvatar = data.avatars?.[otherUid] || "";
         const unread = data.unreadBy?.includes(user.uid) || false;
 
-        list.push({
+        const chatOverview = {
           id: docSnap.id,
           otherUserId: otherUid,
           otherUserName: otherName,
           otherUserAvatar: otherAvatar || "",
           lastMessage: data.lastMessage ?? "",
           unread: unread,
-        });
+        };
+
+        list.push(chatOverview);
       });
 
-      // Ordenar por última mensagem (mais recentes primeiro)
+      // Ordenar por não lidas primeiro
       list.sort((a, b) => {
         if (a.unread && !b.unread) return -1;
         if (!a.unread && b.unread) return 1;
-
         return 0;
       });
 
       setConversas(list);
+    }, (error) => {
+      devError("Erro ao carregar conversas:", error);
     });
 
-    return () => unsub();
-  }, [user]);
+    return () => {
+      unsub();
+    };
+  }, [user?.uid]);
 
   const handleGoogleLogin = async () => {
     try {
-      console.log("handleGoogleLogin - Iniciando login com Google...");
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-
-      console.log("handleGoogleLogin - Login bem-sucedido, usuário:", user.uid);
 
       const userRef = doc(db, "Users", user.uid);
       const userSnap = await getDoc(userRef);
 
       if (!userSnap.exists()) {
-        console.log("handleGoogleLogin - Novo usuário, criando documento...");
         // Novo usuário: salva createdAt
         await setDoc(userRef, {
           displayName: user.displayName,
@@ -329,18 +374,13 @@ export default function Home() {
           photoURL: user.photoURL,
           createdAt: serverTimestamp(), // <-- timestamp para 24h
         });
-        console.log("handleGoogleLogin - Documento do usuário criado");
       } else {
-        console.log(
-          "handleGoogleLogin - Usuário existente, atualizando dados...",
-        );
         // Usuário já existe: atualiza dados sem alterar createdAt
         await updateDoc(userRef, {
           displayName: user.displayName,
           email: user.email,
           photoURL: user.photoURL,
         });
-        console.log("handleGoogleLogin - Dados do usuário atualizados");
       }
     } catch (error: any) {
       // Tratar erros de popup cancelado pelo usuário sem mostrar erro
@@ -403,7 +443,7 @@ export default function Home() {
         userTag = userSnap.data().organizationTag || "";
       }
     } catch (error) {
-      console.error("Erro ao buscar tag do usuário:", error);
+      devError("Erro ao buscar tag do usuário:", error);
     }
 
     const newComment = {
@@ -425,7 +465,7 @@ export default function Home() {
       });
       console.log("Comentário adicionado no post:", postId);
     } catch (error) {
-      console.error("Erro ao adicionar comentário:", error);
+      devError("Erro ao adicionar comentário:", error);
     }
   };
 
@@ -446,7 +486,6 @@ export default function Home() {
       await updateDoc(postRef, {
         comments: arrayRemove(comment), // remove exatamente o objeto do array
       });
-      console.log("Comentário deletado:", comment);
     } catch (err) {
       console.error("Erro ao deletar comentário:", err);
     }
@@ -500,7 +539,7 @@ export default function Home() {
         });
       }
     } catch (error) {
-      console.error("Erro ao atualizar status de digitação:", error);
+      devError("Erro ao atualizar status de digitação:", error);
     }
   };
 
@@ -551,19 +590,13 @@ export default function Home() {
     const messagesUnsubscribe = onSnapshot(
       query(chatCol, orderBy("createdAt", "asc")),
       (snap) => {
-        console.log("Mensagens recebidas:", snap.docs.length);
         const msgs = snap.docs.map((d) => {
           const data = d.data() as ChatMessage;
-
-          //console.log("Mensagem:", data);
           return { ...data, id: d.id }; // Adicionar ID do documento
         });
 
         setChatMessages(msgs);
-      },
-      (error) => {
-        console.error("Erro no listener de mensagens:", error);
-      },
+      }
     );
 
     // Configurar listener para status de digitação
@@ -649,8 +682,6 @@ export default function Home() {
     const chatCol = collection(db, "Chats", chatId, "Messages");
 
     try {
-      console.log("Enviando mensagem para chatId:", chatId);
-
       // Parar de mostrar "digitando" antes de enviar
       updateTypingStatus(false);
 
@@ -661,37 +692,34 @@ export default function Home() {
       }
 
       // Adicionar mensagem à subcoleção
-      await addDoc(chatCol, {
+      const messageData = {
         senderId: user.uid,
         senderName: user.displayName || user.email?.split("@")[0],
         senderAvatar: user.photoURL || "",
         text: chatText.trim(),
         createdAt: serverTimestamp(),
-      });
-
-      console.log("Mensagem enviada com sucesso");
+      };
+      
+      const messageRef = await addDoc(chatCol, messageData);
 
       // Atualizar documento principal do chat
-      await setDoc(
-        chatDoc,
-        {
-          participants: [user.uid, showChatWith.otherUserId],
-          names: {
-            [user.uid]: user.displayName || user.email?.split("@")[0],
-            [showChatWith.otherUserId]: showChatWith.otherUserName,
-          },
-          avatars: {
-            [user.uid]: user.photoURL || "",
-            [showChatWith.otherUserId]: showChatWith.otherUserAvatar || "",
-          },
-          lastMessage: chatText.trim(),
-          unreadBy: [showChatWith.otherUserId],
-          updatedAt: serverTimestamp(),
+      const chatUpdateData = {
+        participants: [user.uid, showChatWith.otherUserId],
+        names: {
+          [user.uid]: user.displayName || user.email?.split("@")[0],
+          [showChatWith.otherUserId]: showChatWith.otherUserName,
         },
-        { merge: true },
-      );
+        avatars: {
+          [user.uid]: user.photoURL || "",
+          [showChatWith.otherUserId]: showChatWith.otherUserAvatar || "",
+        },
+        lastMessage: chatText.trim(),
+        unreadBy: [showChatWith.otherUserId],
+        updatedAt: serverTimestamp(),
+      };
 
-      console.log("Documento do chat atualizado");
+      await setDoc(chatDoc, chatUpdateData, { merge: true });
+
       setChatText("");
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
@@ -735,7 +763,7 @@ export default function Home() {
 
       alert("Perfil atualizado com sucesso!");
     } catch (err) {
-      console.error("Erro ao atualizar perfil:", err);
+      devError("Erro ao atualizar perfil:", err);
       alert("Erro ao atualizar perfil.");
     }
   };
@@ -929,11 +957,11 @@ export default function Home() {
           </div>
         </NavbarContent>
 
-
-         <NavbarContent justify="end">
-          <Button color="danger" onPress={handleLogout}>
-            <HiOutlineLogout className="w-5 h-5" />
-          </Button>
+        {/* Navbar direita */}
+        <NavbarContent justify="end">
+                  <Button color="danger" onPress={handleLogout}>
+                    <HiOutlineLogout className="w-5 h-5" />
+                  </Button>
 
           {/* Avatar com dropdown */}
           <Dropdown>
@@ -1114,9 +1142,49 @@ export default function Home() {
               unread: c.unread ?? false,
             }))}
             currentUserId={user.uid}
-            deleteConversa={(id: string) => {
-              // Implementar lógica de deletar conversa se necessário
-              console.log("Deletar conversa:", id);
+            deleteConversa={async (id: string) => {
+              if (!user) return;
+              
+              try {
+                // Deletar o documento principal da conversa
+                await deleteDoc(doc(db, "Chats", id));
+                
+                // Deletar todas as mensagens da subcoleção
+                const messagesRef = collection(db, "Chats", id, "Messages");
+                const messagesSnapshot = await getDocs(messagesRef);
+                
+                // Deletar todas as mensagens em lote
+                const batch = writeBatch(db);
+                messagesSnapshot.docs.forEach((messageDoc) => {
+                  batch.delete(messageDoc.ref);
+                });
+                
+                if (messagesSnapshot.docs.length > 0) {
+                  await batch.commit();
+                }
+                
+                // Deletar a subcoleção de typing se existir
+                const typingRef = collection(db, "Chats", id, "Typing");
+                const typingSnapshot = await getDocs(typingRef);
+                
+                if (typingSnapshot.docs.length > 0) {
+                  const typingBatch = writeBatch(db);
+                  typingSnapshot.docs.forEach((typingDoc) => {
+                    typingBatch.delete(typingDoc.ref);
+                  });
+                  await typingBatch.commit();
+                }
+                
+                //console.log("Conversa deletada com sucesso:", id);
+                
+                if (showChatWith && showChatWith.id === id) {
+                  setShowChatWith(null);
+                }
+                
+              } catch (error) {
+                devError("Erro ao deletar conversa:", error);
+                alert("Erro ao deletar conversa. Tente novamente.");
+              }
             }}
             handleComment={handleComment}
             handleDeleteComment={handleDeleteComment}
@@ -1155,9 +1223,50 @@ export default function Home() {
               lastMessage: c.lastMessage ?? "",
               unread: c.unread ?? false,
             }))}
-            deleteConversa={(id: string) => {
-              // Implementar lógica de deletar conversa se necessário
-              console.log("Deletar conversa:", id);
+            deleteConversa={async (id: string) => {
+              if (!user) return;
+              
+              try {
+                //  Deletar o documento principal da conversa
+                await deleteDoc(doc(db, "Chats", id));
+                
+                //  Deletar todas as mensagens da subcoleção
+                const messagesRef = collection(db, "Chats", id, "Messages");
+                const messagesSnapshot = await getDocs(messagesRef);
+                
+                // Deletar todas as mensagens em lote
+                const batch = writeBatch(db);
+                messagesSnapshot.docs.forEach((messageDoc) => {
+                  batch.delete(messageDoc.ref);
+                });
+                
+                if (messagesSnapshot.docs.length > 0) {
+                  await batch.commit();
+                }
+                
+                // Deletar a subcoleção de typing se existir
+                const typingRef = collection(db, "Chats", id, "Typing");
+                const typingSnapshot = await getDocs(typingRef);
+                
+                if (typingSnapshot.docs.length > 0) {
+                  const typingBatch = writeBatch(db);
+                  typingSnapshot.docs.forEach((typingDoc) => {
+                    typingBatch.delete(typingDoc.ref);
+                  });
+                  await typingBatch.commit();
+                }
+                
+                //console.log("Conversa deletada com sucesso:", id);
+                
+                // Se a conversa deletada era a atualmente aberta, fechar o chat
+                if (showChatWith && showChatWith.id === id) {
+                  setShowChatWith(null);
+                }
+                
+              } catch (error) {
+                devError("Erro ao deletar conversa:", error);
+                alert("Erro ao deletar conversa. Tente novamente.");
+              }
             }}
             isTyping={
               showChatWith

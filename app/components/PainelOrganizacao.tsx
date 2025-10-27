@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Chip } from "@heroui/chip";
 import { Avatar } from "@heroui/avatar";
@@ -8,6 +8,7 @@ import { Button } from "@heroui/button";
 import { Spinner } from "@heroui/spinner";
 import { Tabs, Tab } from "@heroui/tabs";
 import { Input } from "@heroui/input";
+import { Textarea } from "@heroui/input";
 import { Select, SelectItem } from "@heroui/select";
 import {
   HiOutlineUsers,
@@ -38,6 +39,8 @@ import {
   serverTimestamp,
   collection,
   deleteField,
+  arrayUnion,
+  limit,
 } from "firebase/firestore";
 import { addToast } from "@heroui/toast";
 
@@ -77,6 +80,18 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState("overview");
   const { getRoleName, getRoleEmoji, getRolePermissions } = useRoleManagement();
+
+  // Listener para mudanças de sub-aba via eventos customizados
+  useEffect(() => {
+    const handleSubTabChange = (event: CustomEvent) => {
+      setActiveTab(event.detail as string);
+    };
+
+    window.addEventListener("changeSubTab", handleSubTabChange as EventListener);
+
+    return () =>
+      window.removeEventListener("changeSubTab", handleSubTabChange as EventListener);
+  }, []);
 
   // Estados para configurações da organização
   const [orgSettings, setOrgSettings] = useState({
@@ -184,7 +199,12 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
     if (!tag || tag === userOrg?.tag) return true;
 
     try {
-      const q = query(collection(db, "organizations"), where("tag", "==", tag));
+      // Adicionar limite para otimizar a consulta
+      const q = query(
+        collection(db, "organizations"), 
+        where("tag", "==", tag),
+        limit(1)
+      );
       const querySnapshot = await getDocs(q);
 
       return querySnapshot.empty;
@@ -220,15 +240,15 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
       return;
     }
 
-    // Validar formato da tag (apenas letras, números e underscore)
-    const tagRegex = /^[a-zA-Z0-9_]+$/;
+    // Validar formato da tag (permite caracteres Unicode, letras, números e underscore)
+    const tagRegex = /^[\p{L}\p{N}_]+$/u;
 
     if (!tagRegex.test(orgSettings.tag)) {
       addToast({
-        title: "Erro de Validação",
-        description: "Tag deve conter apenas letras, números e underscore",
-        color: "danger",
-      });
+          title: "Erro de Validação",
+          description: "Tag deve conter apenas letras, números, underscore e caracteres Unicode",
+          color: "danger",
+        });
 
       return;
     }
@@ -236,22 +256,24 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
     setSettingsLoading(true);
 
     try {
-      // Validar unicidade da tag
-      const isTagUnique = await validateTag(orgSettings.tag);
+      // Validar unicidade da tag apenas se for diferente da tag atual
+      if (orgSettings.tag !== userOrg.tag) {
+        const isTagUnique = await validateTag(orgSettings.tag);
 
-      if (!isTagUnique) {
-        setTagValidation({
-          isValid: false,
-          message: "Esta tag já está em uso por outra organização",
-        });
-        addToast({
-          title: "Tag Indisponível",
-          description: "Esta tag já está em uso por outra organização",
-          color: "danger",
-        });
-        setSettingsLoading(false);
+        if (!isTagUnique) {
+          setTagValidation({
+            isValid: false,
+            message: "Esta tag já está em uso por outra organização",
+          });
+          addToast({
+            title: "Tag Indisponível",
+            description: "Esta tag já está em uso por outra organização",
+            color: "danger",
+          });
+          setSettingsLoading(false);
 
-        return;
+          return;
+        }
       }
 
       // Atualizar organização no Firestore
@@ -351,6 +373,19 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
      });
      setTagValidation({ isValid: true, message: "" });
    };
+
+  // Função helper para logs apenas em desenvolvimento
+  function devLog(...args: any[]) {
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      console.log(...args);
+    }
+  }
+
+  function devError(...args: any[]) {
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      console.error(...args);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -571,7 +606,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                   onRemoveMember={async (userId: string, reason?: string) => {
                     if (!user || !userOrg || !userMembership) return;
 
-                    console.log("🔧 Iniciando remoção de membro:", {
+                    devLog("🔧 Iniciando remoção de membro:", {
                       userId,
                       reason,
                     });
@@ -581,7 +616,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                     );
 
                     if (!targetMember) {
-                      console.error("❌ Membro não encontrado");
+                      devError("❌ Membro não encontrado");
                       addToast({
                         title: "Erro",
                         description: "Membro não encontrado",
@@ -597,7 +632,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                     );
 
                     if (!validation.valid) {
-                      console.error("❌ Validação falhou:", validation.reason);
+                      devError("❌ Validação falhou:", validation.reason);
                       addToast({
                         title: "Erro de Permissão",
                         description: validation.reason || "Erro de validação",
@@ -610,7 +645,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                     try {
                       const batch = writeBatch(db);
 
-                      // 🔹 Remove da subcoleção da organização
+                      // Remove da subcoleção da organização
                       const orgMembershipRef = doc(
                         db,
                         `organizations/${userOrg.id}/memberships`,
@@ -619,7 +654,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
 
                       batch.delete(orgMembershipRef);
 
-                      // 🔹 Remove da coleção global "memberships"
+                      // Remove da coleção global "memberships"
                       const globalMembershipsQuery = query(
                         collection(db, "memberships"),
                         where("userId", "==", userId),
@@ -633,7 +668,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                         batch.delete(docSnap.ref),
                       );
 
-                      // 🔹 Atualiza contador da organização
+                      // Atualiza contador da organização
                       const orgRef = doc(db, "organizations", userOrg.id);
 
                       batch.update(orgRef, {
@@ -641,7 +676,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                         updatedAt: serverTimestamp(),
                       });
 
-                      // 🔹 Remove o campo organizationTag do documento do usuário
+                      // Remove o campo organizationTag do documento do usuário
                       const userRef = doc(db, "Users", userId);
 
                       batch.set(
@@ -653,12 +688,9 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                         { merge: true }, // garante que não apague outros campos
                       );
 
-                      // 🔹 Executa o batch
                       await batch.commit();
 
-                      console.log(
-                        "✅ Membro removido e organizationTag apagado",
-                      );
+                      devLog("✅ Membro removido e organizationTag apagado");
 
                       addToast({
                         title: "Membro Removido",
@@ -667,7 +699,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                         color: "success",
                       });
                     } catch (error) {
-                      console.error("❌ Erro ao remover membro:", error);
+                      devError("❌ Erro ao remover membro:", error);
                       addToast({
                         title: "Erro",
                         description:
@@ -683,7 +715,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                   ) => {
                     if (!user || !userOrg || !userMembership) return;
 
-                    console.log("🔧 Iniciando alteração de cargo:", {
+                    devLog("🔧 Iniciando alteração de cargo:", {
                       userId,
                       newRole,
                       reason,
@@ -695,7 +727,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                     );
 
                     if (!targetMember) {
-                      console.error("❌ Membro não encontrado");
+                      devError("❌ Membro não encontrado");
                       addToast({
                         title: "Erro",
                         description: "Membro não encontrado",
@@ -713,7 +745,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                     );
 
                     if (!validation.valid) {
-                      console.error("❌ Validação falhou:", validation.reason);
+                      devError("❌ Validação falhou:", validation.reason);
                       addToast({
                         title: "Erro de Permissão",
                         description: validation.reason || "Erro de validação",
@@ -736,15 +768,13 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                       batch.update(orgMembershipRef, {
                         role: newRole,
                         updatedAt: serverTimestamp(),
-                        roleHistory: [
-                          {
-                            previousRole: userMembership.role,
-                            newRole: newRole,
-                            changedBy: user.uid,
-                            changedAt: serverTimestamp(),
-                            reason: reason || "Alteração de cargo",
-                          },
-                        ],
+                        roleHistory: arrayUnion({
+                          previousRole: targetMember.role,
+                          newRole: newRole,
+                          changedBy: user.uid,
+                          changedAt: new Date(),
+                          reason: reason || "Alteração de cargo",
+                        }),
                       });
 
                       // Atualizar na coleção global de memberships
@@ -767,14 +797,14 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
 
                       await batch.commit();
 
-                      console.log("✅ Cargo alterado com sucesso");
+                      devLog("✅ Cargo alterado com sucesso");
                       addToast({
                         title: "Cargo Alterado",
                         description: `Cargo do membro foi alterado para ${newRole} com sucesso`,
                         color: "success",
                       });
                     } catch (error) {
-                      console.error("❌ Erro ao alterar cargo:", error);
+                      devError("❌ Erro ao alterar cargo:", error);
                       addToast({
                         title: "Erro",
                         description:
@@ -893,7 +923,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                     {/* Tag da Organização */}
                     <Input
                       isRequired
-                      description="Tag única da organização (apenas letras, números e _)"
+                      description="Tag única da organização (letras, números, underscore e caracteres Unicode). Ex: 123M, AB0, G4L, ҲƲƧ, ƝҲƧ"
                       endContent={<span className="text-gray-500">]</span>}
                       errorMessage={tagValidation.message}
                       isInvalid={!tagValidation.isValid}
@@ -952,12 +982,18 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                     </div>
 
                     {/* Descrição */}
-                    <Input
-                      description="Descrição da organização (máximo 500 caracteres)"
+                    <Textarea
+                      description="Descrição da organização (máximo 1000 caracteres)"
                       label="Descrição"
-                      maxLength={500}
+                      maxLength={1000}
                       placeholder="Descreva sua organização..."
                       value={orgSettings.description}
+                      minRows={3}
+                      maxRows={6}
+                      classNames={{
+                        input: "resize-none",
+                        inputWrapper: "min-h-[80px]"
+                      }}
                       onChange={(e) =>
                         setOrgSettings((prev) => ({
                           ...prev,
@@ -1133,7 +1169,16 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                       description="Selecione um membro para transferir a liderança da organização"
                       label="Transferir Liderança"
                       placeholder={members && members.length > 1 ? "Selecione um membro" : "Nenhum membro disponível (não é possível transferir)"}
-                      selectedKeys={orgSettings.ownerId ? [orgSettings.ownerId] : []}
+                      selectedKeys={
+                        orgSettings.ownerId && 
+                        members?.some(member => 
+                          member.userId === orgSettings.ownerId && 
+                          member.userId !== userOrg?.ownerId && 
+                          member.status === 'accepted'
+                        ) 
+                          ? [orgSettings.ownerId] 
+                          : []
+                      }
                       startContent={
                         <HiOutlineSwitchHorizontal className="w-4 h-4 text-pink-500" />
                       }
@@ -1151,6 +1196,7 @@ const PainelOrganizacao: React.FC<PainelOrganizacaoProps> = ({
                          .map((member) => (
                            <SelectItem
                              key={member.userId}
+                             textValue={`${member.userData?.displayName || "Usuário"} (${getRoleName(member.role)})`}
                              startContent={
                                <Avatar
                                  className="w-6 h-6"

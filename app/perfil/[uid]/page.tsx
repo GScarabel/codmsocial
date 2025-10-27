@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Perfil from "../../components/Perfil";
+import PerfilUsuario from "../../components/PerfilUsuario";
+import Perfil from "@/app/components/Perfil";
 
 interface PerfilPageProps {
   params: Promise<{ uid: string }>;
@@ -11,7 +12,7 @@ const PerfilPage: React.FC<PerfilPageProps> = ({ params }) => {
   const [uid, setUid] = useState<string | null>(null);
 
   useEffect(() => {
-    // “Desembrulha” a promise
+    // "Desembrulha" a promise
     params.then(p => setUid(p.uid));
   }, [params]);
 

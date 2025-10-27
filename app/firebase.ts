@@ -6,6 +6,7 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 const firebaseConfig = {
   apiKey: "AIzaSyB3LeSAftV91bja13PSOQkTTsIrg4faMBk",
   authDomain: "codmsocial-f8015.firebaseapp.com",
+  databaseURL: "https://codmsocial-f8015-default-rtdb.firebaseio.com",
   projectId: "codmsocial-f8015",
   storageBucket: "codmsocial-f8015.firebasestorage.app",
   messagingSenderId: "391686792657",

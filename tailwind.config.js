@@ -1,4 +1,4 @@
-import { heroui } from "@heroui/theme";
+import {heroui} from "@heroui/theme"
 
 /** @type {import('tailwindcss').Config} */
 const config = {
@@ -12,15 +12,6 @@ const config = {
       fontFamily: {
         sans: ["var(--font-sans)"],
         mono: ["var(--font-mono)"],
-      },
-      keyframes: {
-        sparkle: {
-          '0%, 100%': { opacity: '0' },
-          '50%': { opacity: '1' },
-        },
-      },
-      animation: {
-        sparkle: 'sparkle 1.5s infinite',
       },
     },
   },
